@@ -77,6 +77,22 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
                             captureSession.sessionPreset = AVCaptureSessionPreset640x480
                         }
                         
+                        // Set frame rate
+                        do {
+                            try device.lockForConfiguration()
+                            device.activeVideoMinFrameDuration = CMTimeMake(1,10)
+                            device.activeVideoMaxFrameDuration = CMTimeMake(1,10)
+                            device.unlockForConfiguration()
+                        } catch {
+                            print("Could not lock camera for configuration.")
+                        }
+                        
+                        // TODO Lock focus
+                        
+                        
+                        // TODO Lock exposure
+                        
+
                         // Show preview
                         previewLayer = AVCaptureVideoPreviewLayer(session: captureSession);
                         previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
