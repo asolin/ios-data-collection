@@ -67,36 +67,32 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
                     let input = try AVCaptureDeviceInput(device: device)
                     if (captureSession.canAddInput(input)) {
                         
+                        // Add input
                         captureSession.addInput(input);
+                        
+                        // Set resolution
+                        if (captureSession.canSetSessionPreset(AVCaptureSessionPreset640x480)) {
+                            captureSession.sessionPreset = AVCaptureSessionPreset640x480
+                        }
 
+                        // Show preview
                         previewLayer = AVCaptureVideoPreviewLayer(session: captureSession);
                         previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
                         previewLayer.connection.videoOrientation = AVCaptureVideoOrientation.portrait;
-                        
                         cameraView.layer.addSublayer(previewLayer);
 
-                        // Set output stream
+                        // Add output
                         videoOutputStream = AVCaptureVideoDataOutput()
-                        //videoOutputStream.videoSettings = [(kCVPixelBufferPixelFormatTypeKey as NSString) : NSNumber(value: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange as UInt32)] // 3
-                        
-                        //videoOutputStream.alwaysDiscardsLateVideoFrames = true // 4
-                        
-                        
-                       
                         videoOutputStream?.setSampleBufferDelegate(self, queue: captureSessionQueue)
-                        
-                        //videoOutputStream?.setSampleBufferDelegate(self, queue: DispatchQueue(label: "sampleBuffer", attributes: []))
-                        
-                        
                         if captureSession.canAddOutput(videoOutputStream) {
                             captureSession.addOutput(videoOutputStream)
                         }
                        
-                        // Start running is blocking the main queue, start in its own
+                        // startRunning is blocking the main queue, start in its own
                         captureSessionQueue.async {
                             self.captureSession.startRunning()
-                            //self.videoOutputStream?.setSampleBufferDelegate(self, queue: self.captureSessionQueue)
                         }
+                        
                         break
                     }
                 } catch let error as Error! {
@@ -224,63 +220,41 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
             
             
             
-            //start AVAssetWriter
-            
-            let videoPath = NSURL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(filename)!.appendingPathExtension("mov") as NSURL
-            
+            /* Start video asset writing */
+            let videoPath = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(filename).appendingPathExtension("mov")
             
             do {
-                assetWriter = try AVAssetWriter(outputURL: videoPath.absoluteURL!, fileType: AVFileTypeQuickTimeMovie )
+                assetWriter = try AVAssetWriter(outputURL: videoPath, fileType: AVFileTypeQuickTimeMovie )
             } catch {
                 print("Error converting images to video: asset initialization error")
                 return
             }
           
-            //let writerInput = assetWriter!.inputs.filter{ $0.mediaType == AVMediaTypeVideo }.first!
-            
             let videoOutputSettings: Dictionary<String, AnyObject> = [
                 AVVideoCodecKey : AVVideoCodecH264 as AnyObject,
-                AVVideoWidthKey : 480 as AnyObject,
-                AVVideoHeightKey : 640 as AnyObject
-            ];
+                AVVideoWidthKey : 640 as AnyObject,
+                AVVideoHeightKey : 480 as AnyObject
+            ]
             
+            // If grayscale: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
+            // If color: kCVPixelFormatType_32BGRA / kCVPixelFormatType_32ARGB
             let sourceBufferAttributes : [String : AnyObject] = [
-                kCVPixelBufferPixelFormatTypeKey as String : Int(kCVPixelFormatType_32ARGB) as AnyObject,
-                kCVPixelBufferWidthKey as String : 480 as AnyObject,
-                kCVPixelBufferHeightKey as String : 640 as AnyObject,
-                ]
+                kCVPixelBufferPixelFormatTypeKey as String : Int(kCVPixelFormatType_32BGRA) as AnyObject,
+            ]
             
-            videoInput = AVAssetWriterInput(mediaType: AVMediaTypeVideo, outputSettings: sourceBufferAttributes)
+            videoInput = AVAssetWriterInput(mediaType: AVMediaTypeVideo, outputSettings: videoOutputSettings)
             videoInput?.expectsMediaDataInRealTime = true
-
-            
             pixelBufferAdaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: videoInput!, sourcePixelBufferAttributes: sourceBufferAttributes)
-            //print(pixelBufferAdaptor)
             
-            // Start writing session
-            assetWriter!.startWriting()
-            assetWriter!.startSession(atSourceTime: kCMTimeZero)
-            /*
-            if (pixelBufferAdaptor!.pixelBufferPool == nil) {
-                print("Error converting images to video: pixelBufferPool nil after starting session")
-                
-                assetWriter!.finishWriting{
-                    print("assetWritter stopped!")
-                }
-                
-                
-                return
-            }
-            */
-            
-            
-            print("Recording started!")
-         
+            // Add video input and start waiting for data
+            assetWriter!.add(videoInput!)
             
             /* Start capturing */
             isCapturing = true;
             self.toggleButton.setTitle("Stop", for: .normal);
             animateButtonRadius(toValue: toggleButton.frame.height/10.0)
+            
+            print("Recording started!")
             
         } else {
             
@@ -290,6 +264,21 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
             isCapturing = false
             self.toggleButton.setTitle("Start", for: .normal)
             animateButtonRadius(toValue: toggleButton.frame.height/2.0)
+            
+            /* Stop asset writer */
+            assetWriter!.finishWriting{
+                print("Asset writer stopped.")
+            }
+            
+            /* Move video file */
+            let documentsPath = try! FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+            let destinationVideoPath = NSURL(fileURLWithPath: documentsPath.absoluteString).appendingPathComponent(filename)?.appendingPathExtension("mov")
+            let fileManager = FileManager.default
+            do {
+                try fileManager.moveItem(at: assetWriter!.outputURL, to: destinationVideoPath!)
+            } catch let error as NSError {
+                print("Error occurred while moving video file:\n \(error)")
+            }
             
             /* Stop capture */
             motionManager.stopAccelerometerUpdates();
@@ -301,9 +290,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
             outputStream.close()
             
             /* Move data file */
-            let documentsPath = try! FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
             let destinationPath = NSURL(fileURLWithPath: documentsPath.absoluteString).appendingPathComponent(filename)?.appendingPathExtension("csv")
-            let fileManager = FileManager.default
             do {
                 try fileManager.moveItem(at: filePath as URL, to: destinationPath!)
             } catch let error as NSError {
@@ -328,7 +315,6 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     }
     
     
-    
     // MARK: - AVCaptureVideoDataOutputSampleBufferDelegate
     
     func captureOutput(_ output: AVCaptureOutput, didDrop sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
@@ -337,112 +323,33 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     
     func captureOutput(_ captureOutput: AVCaptureOutput!, didOutputSampleBuffer sampleBuffer: CMSampleBuffer!, from connection: AVCaptureConnection!)
     {
-        print(" frame.")
         let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
         let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)
-        let cameraImage = CIImage(cvPixelBuffer: pixelBuffer!)
-        let bufferImage = UIImage(ciImage: cameraImage)
+        //let cameraImage = CIImage(cvPixelBuffer: pixelBuffer!)
+        //let bufferImage = UIImage(ciImage: cameraImage)
         
        captureSessionQueue.async {
+
+            // Start session at first recorded frame
+            if (self.isCapturing && self.assetWriter?.status != AVAssetWriterStatus.writing) {
+                self.assetWriter!.startWriting()
+                self.assetWriter!.startSession(atSourceTime: timestamp)
+            }
+        
             // If recording is active append bufferImage to video frame
             while (self.isCapturing) {
                 // Append images to video
-                //print(self.videoInput!)
                 if (self.videoInput!.isReadyForMoreMediaData) {
                     //let lastFrameTime = CMTimeMake(Int64(frameCount), videoFPS)
                     //let presentationTime = frameCount == 0 ? lastFrameTime : CMTimeAdd(lastFrameTime, frameDuration)
                     self.pixelBufferAdaptor?.append(pixelBuffer!, withPresentationTime: timestamp)
-                   // frameCount += 1
+                    // frameCount += 1
+                    print("Frame written to asset writer.")
                     break
                 }
-                
             }
         }
     }
-    
-    /*
-    func startVideoRecording() {
-     
-        guard let assetWriter = createAssetWriter(path: filePath!, size: videoSize) else {
-            print("Error converting images to video: AVAssetWriter not created")
-            return
-        }
-        
-        // AVAssetWriter exists so create AVAssetWriterInputPixelBufferAdaptor
-        let writerInput = assetWriter.inputs.filter{ $0.mediaType == AVMediaTypeVideo }.first!
-        
-        
-        let sourceBufferAttributes : [String : AnyObject] = [
-            kCVPixelBufferPixelFormatTypeKey as String : Int(kCVPixelFormatType_32ARGB) as AnyObject,
-            kCVPixelBufferWidthKey as String : videoSize.width as AnyObject,
-            kCVPixelBufferHeightKey as String : videoSize.height as AnyObject,
-            ]
-        
-        let pixelBufferAdaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: writerInput, sourcePixelBufferAttributes: sourceBufferAttributes)
-        
-        // Start writing session
-        assetWriter.startWriting()
-        assetWriter.startSession(atSourceTime: kCMTimeZero)
-        if (pixelBufferAdaptor.pixelBufferPool == nil) {
-            print("Error converting images to video: pixelBufferPool nil after starting session")
-            
-            assetWriter.finishWriting{
-                print("assetWritter stopped!")
-            }
-            recordingNow = false
-            
-            return
-        }
-        
-        frameCount = 0
-        
-        print("Recording started!")
-        
-    }
-    */
-    
-   /*
-    func startVideoRecording() {
-        
-        
-        guard let assetWriter = createAssetWriter(path: filePath!, size: videoSize) else {
-            print("Error converting images to video: AVAssetWriter not created")
-            return
-        }
-        
-        // AVAssetWriter exists so create AVAssetWriterInputPixelBufferAdaptor
-        let writerInput = assetWriter.inputs.filter{ $0.mediaType == AVMediaTypeVideo }.first!
-        
-        
-        let sourceBufferAttributes : [String : AnyObject] = [
-            kCVPixelBufferPixelFormatTypeKey as String : Int(kCVPixelFormatType_32ARGB) as AnyObject,
-            kCVPixelBufferWidthKey as String : videoSize.width as AnyObject,
-            kCVPixelBufferHeightKey as String : videoSize.height as AnyObject,
-            ]
-        
-        let pixelBufferAdaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: writerInput, sourcePixelBufferAttributes: sourceBufferAttributes)
-        
-        // Start writing session
-        assetWriter.startWriting()
-        assetWriter.startSession(atSourceTime: kCMTimeZero)
-        if (pixelBufferAdaptor.pixelBufferPool == nil) {
-            print("Error converting images to video: pixelBufferPool nil after starting session")
-            
-            assetWriter.finishWriting{
-                print("assetWritter stopped!")
-            }
-            recordingNow = false
-            
-            return
-        }
-        
-        frameCount = 0
-        
-        print("Recording started!")
-        
-    }
-    
-   */
 }
 
 // Extension to OutputStream: Write Strings

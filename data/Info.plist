@@ -45,5 +45,7 @@
     <true/>
     <key>NSCameraUsageDescription</key>
     <string>Access camera for data capture</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Access photos to save recorded data</string>
 </dict>
 </plist>
