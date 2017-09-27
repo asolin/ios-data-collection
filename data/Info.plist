@@ -43,5 +43,7 @@
 	</array>
     <key>UIFileSharingEnabled</key>
     <true/>
+    <key>NSCameraUsageDescription</key>
+    <string>Access camera for data capture</string>
 </dict>
 </plist>

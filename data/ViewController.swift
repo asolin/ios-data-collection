@@ -8,8 +8,11 @@
 
 import UIKit
 import CoreMotion
+import CoreMedia
+import CoreImage
+import AVFoundation
 
-class ViewController: UIViewController {
+class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDelegate {
     
     /* Constants */
     let ACCELEROMETER_ID = 3
@@ -23,10 +26,17 @@ class ViewController: UIViewController {
 
     /* Outlets */
     @IBOutlet weak var toggleButton: UIButton!
+    @IBOutlet weak var cameraView: UIImageView!
     
     /* Managers for the sensor data */
     let motionManager = CMMotionManager()
     let altimeter = CMAltimeter()
+    
+    /* Manager for camera data */
+    let captureSession = AVCaptureSession()
+    var previewLayer = AVCaptureVideoPreviewLayer();
+    var videoOutputStream : AVCaptureVideoDataOutput?
+    let captureSessionQueue: DispatchQueue = DispatchQueue(label: "sampleBuffer", attributes: [])
     
     /* Variables */
     var isCapturing : Bool = false
@@ -43,6 +53,44 @@ class ViewController: UIViewController {
         toggleButton.addGestureRecognizer(tap);
         
     }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        
+        let deviceDiscoverySession = AVCaptureDeviceDiscoverySession(deviceTypes: [AVCaptureDeviceType.builtInDuoCamera, AVCaptureDeviceType.builtInWideAngleCamera,AVCaptureDeviceType.builtInTelephotoCamera], mediaType: AVMediaTypeVideo, position: AVCaptureDevicePosition.unspecified)
+        
+        for device in (deviceDiscoverySession?.devices)! {
+            if(device.position == AVCaptureDevicePosition.back){
+                do {
+                    let input = try AVCaptureDeviceInput(device: device)
+                    if (captureSession.canAddInput(input)) {
+                        
+                        captureSession.addInput(input);
+
+                        previewLayer = AVCaptureVideoPreviewLayer(session: captureSession);
+                        previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
+                        previewLayer.connection.videoOrientation = AVCaptureVideoOrientation.portrait;
+                        
+                        cameraView.layer.addSublayer(previewLayer);
+
+                        // Set output stream
+                        videoOutputStream?.setSampleBufferDelegate(self, queue: captureSessionQueue)
+                        //videoOutputStream?.setSampleBufferDelegate(self, queue: DispatchQueue(label: "sampleBuffer", attributes: []))
+                        if captureSession.canAddOutput(videoOutputStream) {
+                            captureSession.addOutput(videoOutputStream)
+                        }
+                       
+                        // Start running is blocking the main queue, start in its own
+                        captureSessionQueue.async {
+                            self.captureSession.startRunning()
+                        }
+                        break
+                    }
+                } catch let error as Error! {
+                    print("Problem starting camera: \n \(error)")
+                }
+            }
+        }
+    }
 
     override func viewDidLayoutSubviews() {
         
@@ -53,6 +101,8 @@ class ViewController: UIViewController {
         toggleButton.layer.borderColor = UIColor.red.cgColor
         toggleButton.layer.backgroundColor = UIColor.white.cgColor
         toggleButton.layer.shadowColor = UIColor.white.cgColor
+        
+        previewLayer.frame = cameraView.bounds
         
     }
     
@@ -208,6 +258,86 @@ class ViewController: UIViewController {
         toggleButton.layer.cornerRadius = toValue
     }
     
+    func captureOutput(_ captureOutput: AVCaptureOutput!, didOutputSampleBuffer sampleBuffer: CMSampleBuffer!, from connection: AVCaptureConnection!)
+    {
+        
+        let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)
+        let cameraImage = CIImage(cvPixelBuffer: pixelBuffer!)
+        let bufferImage = UIImage(ciImage: cameraImage)
+        
+        print("Frame!")
+        
+        DispatchQueue.main.async {
+            
+                // send captured frame to the videoPreview
+                //self.videoPreview.image = bufferImage
+                
+                
+                // if recording is active append bufferImage to video frame
+                /*
+                while (recordingNow == true){
+                    
+                    print("OK we're recording!")
+                    
+                    /// Append images to video
+                    while (writerInput.isReadyForMoreMediaData) {
+                        
+                        let lastFrameTime = CMTimeMake(Int64(frameCount), videoFPS)
+                        let presentationTime = frameCount == 0 ? lastFrameTime : CMTimeAdd(lastFrameTime, frameDuration)
+                        
+                        pixelBufferAdaptor.append(pixelBuffer!, withPresentationTime: presentationTime)
+                        
+                        
+                        frameCount += 1              
+                    }
+                }
+                */
+        }
+    }
+    
+    
+    /*
+    func startVideoRecording() {
+        
+        guard let assetWriter = createAssetWriter(path: filePath!, size: videoSize) else {
+            print("Error converting images to video: AVAssetWriter not created")
+            return
+        }
+        
+        // AVAssetWriter exists so create AVAssetWriterInputPixelBufferAdaptor
+        let writerInput = assetWriter.inputs.filter{ $0.mediaType == AVMediaTypeVideo }.first!
+        
+        
+        let sourceBufferAttributes : [String : AnyObject] = [
+            kCVPixelBufferPixelFormatTypeKey as String : Int(kCVPixelFormatType_32ARGB) as AnyObject,
+            kCVPixelBufferWidthKey as String : videoSize.width as AnyObject,
+            kCVPixelBufferHeightKey as String : videoSize.height as AnyObject,
+            ]
+        
+        let pixelBufferAdaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: writerInput, sourcePixelBufferAttributes: sourceBufferAttributes)
+        
+        // Start writing session
+        assetWriter.startWriting()
+        assetWriter.startSession(atSourceTime: kCMTimeZero)
+        if (pixelBufferAdaptor.pixelBufferPool == nil) {
+            print("Error converting images to video: pixelBufferPool nil after starting session")
+            
+            assetWriter.finishWriting{
+                print("assetWritter stopped!")
+            }
+            recordingNow = false
+            
+            return
+        }
+        
+        frameCount = 0
+        
+        print("Recording started!")
+        
+    }
+    */
+    
+    
 }
 
 // Extension to OutputStream: Write Strings
@@ -240,8 +370,5 @@ extension OutputStream {
     }
     
 }
-
-
-
 
 
