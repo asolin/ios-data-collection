@@ -34,7 +34,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     
     /* Manager for camera data */
     let captureSession = AVCaptureSession()
-    var previewLayer = AVCaptureVideoPreviewLayer();
+    var previewLayer = AVCaptureVideoPreviewLayer()
     var videoOutputStream : AVCaptureVideoDataOutput?
     let captureSessionQueue: DispatchQueue = DispatchQueue(label: "sampleBuffer", attributes: [])
     
@@ -73,8 +73,18 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
                         cameraView.layer.addSublayer(previewLayer);
 
                         // Set output stream
+                        videoOutputStream = AVCaptureVideoDataOutput()
+                        //videoOutputStream.videoSettings = [(kCVPixelBufferPixelFormatTypeKey as NSString) : NSNumber(value: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange as UInt32)] // 3
+                        
+                        //videoOutputStream.alwaysDiscardsLateVideoFrames = true // 4
+                        
+                        
+                       
                         videoOutputStream?.setSampleBufferDelegate(self, queue: captureSessionQueue)
+                        
                         //videoOutputStream?.setSampleBufferDelegate(self, queue: DispatchQueue(label: "sampleBuffer", attributes: []))
+                        
+                        
                         if captureSession.canAddOutput(videoOutputStream) {
                             captureSession.addOutput(videoOutputStream)
                         }
@@ -82,6 +92,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
                         // Start running is blocking the main queue, start in its own
                         captureSessionQueue.async {
                             self.captureSession.startRunning()
+                            //self.videoOutputStream?.setSampleBufferDelegate(self, queue: self.captureSessionQueue)
                         }
                         break
                     }
@@ -258,7 +269,15 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         toggleButton.layer.cornerRadius = toValue
     }
     
-    func captureOutput(_ captureOutput: AVCaptureOutput!, didOutputSampleBuffer sampleBuffer: CMSampleBuffer!, from connection: AVCaptureConnection!)
+    
+    
+    //func captureOutput(_ output : AVCaptureOutput!, didOutputSampleBuffer sampleBuffer: CMSampleBuffer!, from connection: AVCaptureConnection!)
+    func captureOutput(_ output: AVCaptureOutput!, didDrop sampleBuffer: CMSampleBuffer!, from connection: AVCaptureConnection!) {
+        print("dropped frame")
+        
+    }
+    
+    func captureOutput(_ output: AVCaptureOutput, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection)
     {
         
         let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)
