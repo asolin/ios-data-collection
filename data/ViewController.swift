@@ -271,53 +271,53 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     
     
     
-    //func captureOutput(_ output : AVCaptureOutput!, didOutputSampleBuffer sampleBuffer: CMSampleBuffer!, from connection: AVCaptureConnection!)
-    func captureOutput(_ output: AVCaptureOutput!, didDrop sampleBuffer: CMSampleBuffer!, from connection: AVCaptureConnection!) {
-        print("dropped frame")
-        
+    // MARK: - AVCaptureVideoDataOutputSampleBufferDelegate
+    
+    func captureOutput(_ output: AVCaptureOutput, didDrop sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        print("Dropped frame.")
     }
     
-    func captureOutput(_ output: AVCaptureOutput, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection)
+    func captureOutput(_ captureOutput: AVCaptureOutput!, didOutputSampleBuffer sampleBuffer: CMSampleBuffer!, from connection: AVCaptureConnection!)
     {
         
+        let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
         let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)
         let cameraImage = CIImage(cvPixelBuffer: pixelBuffer!)
         let bufferImage = UIImage(ciImage: cameraImage)
         
-        print("Frame!")
+        print("Frame at \(timestamp)")
         
         DispatchQueue.main.async {
             
-                // send captured frame to the videoPreview
-                //self.videoPreview.image = bufferImage
-                
-                
-                // if recording is active append bufferImage to video frame
-                /*
-                while (recordingNow == true){
-                    
-                    print("OK we're recording!")
-                    
-                    /// Append images to video
-                    while (writerInput.isReadyForMoreMediaData) {
-                        
-                        let lastFrameTime = CMTimeMake(Int64(frameCount), videoFPS)
-                        let presentationTime = frameCount == 0 ? lastFrameTime : CMTimeAdd(lastFrameTime, frameDuration)
-                        
-                        pixelBufferAdaptor.append(pixelBuffer!, withPresentationTime: presentationTime)
-                        
-                        
-                        frameCount += 1              
-                    }
-                }
-                */
+            // send captured frame to the videoPreview
+            //self.videoPreview.image = bufferImage
+            
+            
+            // if recording is active append bufferImage to video frame
+            /*
+             while (recordingNow == true){
+             
+             print("OK we're recording!")
+             
+             /// Append images to video
+             while (writerInput.isReadyForMoreMediaData) {
+             
+             let lastFrameTime = CMTimeMake(Int64(frameCount), videoFPS)
+             let presentationTime = frameCount == 0 ? lastFrameTime : CMTimeAdd(lastFrameTime, frameDuration)
+             
+             pixelBufferAdaptor.append(pixelBuffer!, withPresentationTime: presentationTime)
+             
+             
+             frameCount += 1
+             }
+             }
+             */
         }
     }
     
-    
     /*
     func startVideoRecording() {
-        
+     
         guard let assetWriter = createAssetWriter(path: filePath!, size: videoSize) else {
             print("Error converting images to video: AVAssetWriter not created")
             return
