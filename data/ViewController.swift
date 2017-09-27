@@ -19,6 +19,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     let GYROSCOPE_ID     = 4
     let MAGNETOMETER_ID  = 5
     let BAROMETER_ID     = 6
+    let CAMERA_ID        = 1
     let GRAVITY          = 9.81
     let ACCELEROMETER_DT = 0.01
     let GYROSCOPE_DT     = 0.01
@@ -46,6 +47,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     var outputStream : OutputStream!
     var filename : String = ""
     var filePath : NSURL!
+    var frameCount = 0;
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -249,6 +251,9 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
             // Add video input and start waiting for data
             assetWriter!.add(videoInput!)
             
+            // Reset frame count
+            frameCount = 0;
+            
             /* Start capturing */
             isCapturing = true;
             self.toggleButton.setTitle("Stop", for: .normal);
@@ -340,11 +345,17 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
             while (self.isCapturing) {
                 // Append images to video
                 if (self.videoInput!.isReadyForMoreMediaData) {
-                    //let lastFrameTime = CMTimeMake(Int64(frameCount), videoFPS)
-                    //let presentationTime = frameCount == 0 ? lastFrameTime : CMTimeAdd(lastFrameTime, frameDuration)
+                    
+                    // Append image to video
                     self.pixelBufferAdaptor?.append(pixelBuffer!, withPresentationTime: timestamp)
-                    // frameCount += 1
-                    print("Frame written to asset writer.")
+                    
+                    // Append frame to csv
+                    let str = NSString(format:"%f,%d,%d,0,0\n",
+                        CMTimeGetSeconds(timestamp),
+                        self.CAMERA_ID,
+                        self.frameCount)
+                    if self.outputStream.write(str as String) < 0 { print("Write failure"); }
+                    
                     break
                 }
             }
