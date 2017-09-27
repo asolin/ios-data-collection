@@ -76,7 +76,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
                         if (captureSession.canSetSessionPreset(AVCaptureSessionPreset640x480)) {
                             captureSession.sessionPreset = AVCaptureSessionPreset640x480
                         }
-
+                        
                         // Show preview
                         previewLayer = AVCaptureVideoPreviewLayer(session: captureSession);
                         previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
@@ -89,6 +89,10 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
                         if captureSession.canAddOutput(videoOutputStream) {
                             captureSession.addOutput(videoOutputStream)
                         }
+                        
+                        // Save in portrait orientation
+                        let connection = videoOutputStream?.connection(withMediaType: AVFoundation.AVMediaTypeVideo)
+                        connection?.videoOrientation = .portrait
                        
                         // startRunning is blocking the main queue, start in its own
                         captureSessionQueue.async {
@@ -234,8 +238,8 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
           
             let videoOutputSettings: Dictionary<String, AnyObject> = [
                 AVVideoCodecKey : AVVideoCodecH264 as AnyObject,
-                AVVideoWidthKey : 640 as AnyObject,
-                AVVideoHeightKey : 480 as AnyObject
+                AVVideoWidthKey : 480 as AnyObject,
+                AVVideoHeightKey : 640 as AnyObject
             ]
             
             // If grayscale: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
