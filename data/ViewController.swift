@@ -77,12 +77,29 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
                             captureSession.sessionPreset = AVCaptureSessionPreset640x480
                         }
                         
-                        // Set frame rate
+                        // Set camera settings
                         do {
                             try device.lockForConfiguration()
+                            
+                            // Set frame rate
                             device.activeVideoMinFrameDuration = CMTimeMake(1,10)
                             device.activeVideoMaxFrameDuration = CMTimeMake(1,10)
+                            
+                            // Lock focus to infinity
+                            let focusValue = 1.0
+                            device.setFocusModeLockedWithLensPosition(Float(focusValue), completionHandler: { (time) -> Void in
+                            })
+                            
+                            // Set ISO value
+                            let isoValue = 400
+                            let shutterSpeed = CMTimeMake(1,100)
+                            device.setExposureModeCustomWithDuration(shutterSpeed, iso: Float(isoValue), completionHandler: { (time) -> Void in
+                                //
+                            })
+                            
+                            // Unlock configuration mode
                             device.unlockForConfiguration()
+                            
                         } catch {
                             print("Could not lock camera for configuration.")
                         }
@@ -127,7 +144,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     override func viewDidLayoutSubviews() {
         
         toggleButton.frame = CGRect(x: (self.view.frame.size.width - 80) / 2, y: (self.view.frame.size.height - 100), width: 80, height: 80)
-        toggleButton.layer.borderWidth = 6
+        toggleButton.layer.borderWidth = 2
         toggleButton.layer.cornerRadius = toggleButton.frame.height/2.0
         toggleButton.layer.masksToBounds = true
         toggleButton.layer.borderColor = UIColor.red.cgColor
@@ -329,12 +346,14 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     @IBAction func unwindToMain(segue: UIStoryboardSegue) {
     }
     
+    // MARK: - Animate button
+    
     func animateButtonRadius(toValue: CGFloat) {
         let animation = CABasicAnimation(keyPath:"cornerRadius")
         animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
         animation.fromValue = toggleButton.layer.cornerRadius
         animation.toValue = toValue
-        animation.duration = 1.0
+        animation.duration = 0.5
         toggleButton.layer.add(animation, forKey: "cornerRadius")
         toggleButton.layer.cornerRadius = toValue
     }
@@ -350,10 +369,9 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     {
         let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
         let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)
-        //let cameraImage = CIImage(cvPixelBuffer: pixelBuffer!)
-        //let bufferImage = UIImage(ciImage: cameraImage)
         
-       captureSessionQueue.async {
+        // Execute in its own thread
+        captureSessionQueue.async {
 
             // Start session at first recorded frame
             if (self.isCapturing && self.assetWriter?.status != AVAssetWriterStatus.writing) {
