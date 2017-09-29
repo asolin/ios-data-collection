@@ -104,12 +104,6 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
                             print("Could not lock camera for configuration.")
                         }
                         
-                        // TODO Lock focus
-                        
-                        
-                        // TODO Lock exposure
-                        
-
                         // Show preview
                         previewLayer = AVCaptureVideoPreviewLayer(session: captureSession);
                         previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
@@ -254,11 +248,6 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
                 print("No barometer available.");
             }
             
-            /* Start platform location updates */
-            // TODO
-            
-            
-            
             /* Start video asset writing */
             let videoPath = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(filename).appendingPathExtension("mov")
             
@@ -295,6 +284,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
             isCapturing = true;
             self.toggleButton.setTitle("Stop", for: .normal);
             animateButtonRadius(toValue: toggleButton.frame.height/10.0)
+            UIApplication.shared.isIdleTimerDisabled = true
             
             print("Recording started!")
             
@@ -306,6 +296,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
             isCapturing = false
             self.toggleButton.setTitle("Start", for: .normal)
             animateButtonRadius(toValue: toggleButton.frame.height/2.0)
+            UIApplication.shared.isIdleTimerDisabled = false
             
             /* Stop asset writer */
             assetWriter!.finishWriting{
