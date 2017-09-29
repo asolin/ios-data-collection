@@ -20,7 +20,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     let MAGNETOMETER_ID  = 5
     let BAROMETER_ID     = 6
     let CAMERA_ID        = 1
-    let GRAVITY          = 9.81
+    let GRAVITY          = -9.81
     let ACCELEROMETER_DT = 0.01
     let GYROSCOPE_DT     = 0.01
     let MAGNETOMETER_DT  = 0.01
