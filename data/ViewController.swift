@@ -295,6 +295,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
             isCapturing = true;
             self.toggleButton.setTitle("Stop", for: .normal);
             animateButtonRadius(toValue: toggleButton.frame.height/10.0)
+            UIApplication.shared.isIdleTimerDisabled = true
             
             print("Recording started!")
             
@@ -306,6 +307,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
             isCapturing = false
             self.toggleButton.setTitle("Start", for: .normal)
             animateButtonRadius(toValue: toggleButton.frame.height/2.0)
+            UIApplication.shared.isIdleTimerDisabled = false
             
             /* Stop asset writer */
             assetWriter!.finishWriting{
