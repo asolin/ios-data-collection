@@ -104,12 +104,6 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
                             print("Could not lock camera for configuration.")
                         }
                         
-                        // TODO Lock focus
-                        
-                        
-                        // TODO Lock exposure
-                        
-
                         // Show preview
                         previewLayer = AVCaptureVideoPreviewLayer(session: captureSession);
                         previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
@@ -253,11 +247,6 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
             } else {
                 print("No barometer available.");
             }
-            
-            /* Start platform location updates */
-            // TODO
-            
-            
             
             /* Start video asset writing */
             let videoPath = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(filename).appendingPathExtension("mov")
