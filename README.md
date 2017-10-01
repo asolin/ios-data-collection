@@ -16,6 +16,15 @@ Data collected through AVFoundation. The actual frame timestamps are reported to
 
 The video frames are appended to an H.264 encoded video file (through CoreMedia) in the order they arrive. The frame timestamps are in theory also stored in the video, but we recommend extracting the frames from the video and use the frame timestamps stored in the CSV.
 
+### 2 - Platform location
+Data collected through CoreLocation. The update rate depends on the device and its capabilities. Locations are requested with the desired accuracy of `kCLLocationAccuracyBest`. The timestamps are converted to follow the same clock as the other sensors (time interval since device boot). The stored values are
+* coordinate.latitude
+* coordinate.longitude
+* horizontalAccuracy
+* altitude
+* verticalAccuracy
+* speed
+
 ### 3 - Accelerometer
 Data collected through CoreMotion/CMMotionManager. Acquired at 100 Hz, which is the maximum rate. CoreMotion reports the accelerations in "g"s (at standstill you expect to have 1 g in the vertical direction), and in order to have backward compatibility with our older data sets, we have chosen to scale the values by `-9.81` (the minus sign is to conform to Google Android).
 
