@@ -12,8 +12,10 @@ import CoreMedia
 import CoreImage
 import AVFoundation
 import CoreLocation
+import ARKit
 
-class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDelegate, CLLocationManagerDelegate {
+@available(iOS 11.0, *)
+class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDelegate, CLLocationManagerDelegate, ARSessionDelegate {
     
     /* Constants */
     let CAMERA_ID        = 1
@@ -44,6 +46,9 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     var assetWriter : AVAssetWriter?
     var pixelBufferAdaptor : AVAssetWriterInputPixelBufferAdaptor?
     var videoInput : AVAssetWriterInput?
+    
+    /* Manager for ARKit session */
+    var arSession = ARSession()
     
     /* Variables */
     var isCapturing : Bool = false
@@ -141,6 +146,15 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
                     print("Problem starting camera: \n \(error)")
                 }
             }
+        }
+        
+        /* Set up ARKit */
+        if #available(iOS 11.0, *) {
+            let configuration = ARWorldTrackingConfiguration()
+            arSession.run(configuration)
+            arSession.delegate = self
+        } else {
+            // Fallback on earlier versions
         }
     }
 
@@ -396,7 +410,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     func captureOutput(_ captureOutput: AVCaptureOutput!, didOutputSampleBuffer sampleBuffer: CMSampleBuffer!, from connection: AVCaptureConnection!) {
         let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
         let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)
-        
+
         // Execute in its own thread
         captureSessionQueue.async {
 
@@ -426,9 +440,17 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
             }
         }
     }
+    
+    // MARK: -ARSessionDelegate
+    @available(iOS 11.0, *)
+    func session(_ session: ARSession, didUpdate frame: ARFrame) {
+        let pos = frame.camera.transform.translation
+        print("ARKit position (",pos[0],", ",pos[1],", ",pos[2],") at ",frame.timestamp)
+    }
 }
 
-// Extension to OutputStream: Write Strings
+// MARK: - OutputStream: Write Strings
+
 extension OutputStream {
     
     func write(_ string: String, encoding: String.Encoding = .utf8, allowLossyConversion: Bool = false) -> Int {
@@ -457,6 +479,19 @@ extension OutputStream {
         return -1
     }
     
+}
+
+// MARK: - float4x4 extensions
+
+extension float4x4 {
+    /**
+     Treats matrix as a (right-hand column-major convention) transform matrix
+     and factors out the translation component of the transform.
+     */
+    var translation: float3 {
+        let translation = columns.3
+        return float3(translation.x, translation.y, translation.z)
+    }
 }
 
 
