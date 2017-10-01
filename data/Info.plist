@@ -2,8 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Access Library for photo storage</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleExecutable</key>
@@ -46,6 +44,10 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Access camera for data capture</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Access photos to save recorded data</string>
+	<string>Access photos for saving recorded data</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Access location for recoding data</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Access photos for saving recorded data</string>
 </dict>
 </plist>
