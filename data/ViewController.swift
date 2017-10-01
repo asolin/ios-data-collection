@@ -11,15 +11,17 @@ import CoreMotion
 import CoreMedia
 import CoreImage
 import AVFoundation
+import CoreLocation
 
-class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDelegate {
+class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDelegate, CLLocationManagerDelegate {
     
     /* Constants */
+    let CAMERA_ID        = 1
+    let LOCATION_ID      = 2
     let ACCELEROMETER_ID = 3
     let GYROSCOPE_ID     = 4
     let MAGNETOMETER_ID  = 5
     let BAROMETER_ID     = 6
-    let CAMERA_ID        = 1
     let GRAVITY          = -9.81
     let ACCELEROMETER_DT = 0.01
     let GYROSCOPE_DT     = 0.01
@@ -32,6 +34,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     /* Managers for the sensor data */
     let motionManager = CMMotionManager()
     let altimeter = CMAltimeter()
+    var locationManager = CLLocationManager()
     
     /* Manager for camera data */
     let captureSession = AVCaptureSession()
@@ -61,6 +64,12 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     
     override func viewWillAppear(_ animated: Bool) {
         
+        /* Set up locationManager */
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager.delegate = self
+        locationManager.requestWhenInUseAuthorization()
+        
+        /* Set up camera '*/
         let deviceDiscoverySession = AVCaptureDeviceDiscoverySession(deviceTypes: [AVCaptureDeviceType.builtInDuoCamera, AVCaptureDeviceType.builtInWideAngleCamera,AVCaptureDeviceType.builtInTelephotoCamera], mediaType: AVMediaTypeVideo, position: AVCaptureDevicePosition.unspecified)
         
         for device in (deviceDiscoverySession?.devices)! {
@@ -190,7 +199,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
                         accelerometerData.acceleration.x * self.GRAVITY,
                         accelerometerData.acceleration.y * self.GRAVITY,
                         accelerometerData.acceleration.z * self.GRAVITY)
-                    if self.outputStream.write(str as String) < 0 { print("Write failure"); }
+                    if self.outputStream.write(str as String) < 0 { print("Write accelerometer failure"); }
                     } as CMAccelerometerHandler)
             } else {
                 print("No accelerometer available.");
@@ -206,7 +215,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
                         gyroData.rotationRate.x,
                         gyroData.rotationRate.y,
                         gyroData.rotationRate.z)
-                    if self.outputStream.write(str as String) < 0 { print("Write failure"); }
+                    if self.outputStream.write(str as String) < 0 { print("Write gyroscope failure"); }
                 } as CMGyroHandler)
             } else {
                 print("No gyroscope available.");
@@ -225,7 +234,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
                         magnetometerData.magneticField.x,
                         magnetometerData.magneticField.y,
                         magnetometerData.magneticField.z)
-                    if self.outputStream.write(str as String) < 0 { print("Write failure"); }
+                    if self.outputStream.write(str as String) < 0 { print("Write magnetometer failure"); }
                 } as CMMagnetometerHandler)
             } else {
                 print("No magnetometer available.");
@@ -242,11 +251,14 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
                         self.BAROMETER_ID,
                         altitudeData.pressure.doubleValue,
                         altitudeData.relativeAltitude.doubleValue)
-                    if self.outputStream.write(str as String) < 0 { print("Write failure"); }
+                    if self.outputStream.write(str as String) < 0 { print("Write barometer failure"); }
                 } as CMAltitudeHandler)
             } else {
                 print("No barometer available.");
             }
+            
+            /* Start location updates */
+            locationManager.startUpdatingLocation()
             
             /* Start video asset writing */
             let videoPath = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(filename).appendingPathExtension("mov")
@@ -318,6 +330,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
             motionManager.stopGyroUpdates();
             motionManager.stopMagnetometerUpdates();
             altimeter.stopRelativeAltitudeUpdates();
+            locationManager.stopUpdatingLocation()
             
             /* Close output stream */
             outputStream.close()
@@ -334,6 +347,31 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         
     }
     
+    // MARK: - CLLocationManagerDelegate
+    
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        if (isCapturing) {
+            // Get uptime
+            let systemBoot = Date(timeIntervalSinceReferenceDate: ProcessInfo.processInfo.systemUptime)
+
+            // For each location
+            for loc in locations {
+                let str = NSString(format:"%f,%d,%f,%f,%f,%f,%f,%f\n",
+                    loc.timestamp.timeIntervalSince(systemBoot),
+                    self.LOCATION_ID,
+                    loc.coordinate.latitude,
+                    loc.coordinate.longitude,
+                    loc.horizontalAccuracy,
+                    loc.altitude,
+                    loc.verticalAccuracy,
+                    loc.speed)
+                    if self.outputStream.write(str as String) < 0 { print("Write location failure"); }
+            }
+        }
+    }
+    
+    // MARK: - Unwind action for the extra view
+    
     @IBAction func unwindToMain(segue: UIStoryboardSegue) {
     }
     
@@ -349,15 +387,13 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         toggleButton.layer.cornerRadius = toValue
     }
     
-    
     // MARK: - AVCaptureVideoDataOutputSampleBufferDelegate
     
     func captureOutput(_ output: AVCaptureOutput, didDrop sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         print("Dropped frame.")
     }
     
-    func captureOutput(_ captureOutput: AVCaptureOutput!, didOutputSampleBuffer sampleBuffer: CMSampleBuffer!, from connection: AVCaptureConnection!)
-    {
+    func captureOutput(_ captureOutput: AVCaptureOutput!, didOutputSampleBuffer sampleBuffer: CMSampleBuffer!, from connection: AVCaptureConnection!) {
         let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
         let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)
         
@@ -383,8 +419,8 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
                         CMTimeGetSeconds(timestamp),
                         self.CAMERA_ID,
                         self.frameCount)
-                    if self.outputStream.write(str as String) < 0 { print("Write failure"); }
-                    
+                    if self.outputStream.write(str as String) < 0 { print("Write camera failure"); }
+                    self.frameCount = self.frameCount + 1
                     break
                 }
             }
