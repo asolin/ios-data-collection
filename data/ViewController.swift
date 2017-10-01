@@ -356,7 +356,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
 
             // For each location
             for loc in locations {
-                let str = NSString(format:"%f,%d,%f,%f,%f,%f,%f,%f\n",
+                let str = NSString(format:"%f,%d,%.8f,%.8f,%f,%f,%f,%f\n",
                     loc.timestamp.timeIntervalSince(systemBoot),
                     self.LOCATION_ID,
                     loc.coordinate.latitude,
