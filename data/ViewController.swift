@@ -15,7 +15,7 @@ import CoreLocation
 import ARKit
 
 @available(iOS 11.0, *)
-class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDelegate, CLLocationManagerDelegate, ARSessionDelegate {
+class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDelegate, ARSCNViewDelegate {
     
     /* Constants */
     let CAMERA_ID        = 1
@@ -32,7 +32,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
 
     /* Outlets */
     @IBOutlet weak var toggleButton: UIButton!
-    @IBOutlet weak var cameraView: UIImageView!
+    @IBOutlet weak var arView: ARSCNView!
     
     /* Managers for the sensor data */
     let motionManager = CMMotionManager()
@@ -40,21 +40,10 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     var locationManager = CLLocationManager()
     
     /* Manager for camera data */
-    let captureSession = AVCaptureSession()
-    var previewLayer = AVCaptureVideoPreviewLayer()
-    var videoOutputStream : AVCaptureVideoDataOutput?
     let captureSessionQueue: DispatchQueue = DispatchQueue(label: "sampleBuffer", attributes: [])
     var assetWriter : AVAssetWriter?
     var pixelBufferAdaptor : AVAssetWriterInputPixelBufferAdaptor?
     var videoInput : AVAssetWriterInput?
-    
-    /* Manager for ARKit session */
-    var arSession = ARSession()
-    
-    /* Draw ARKit preview using OpenGL */
-    let glContext = EAGLContext(api: .openGLES2)
-    var glView = GLKView()
-    var ciContext = CIContext()
 
     /* Variables */
     var isCapturing : Bool = false
@@ -80,90 +69,11 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         locationManager.delegate = self
         locationManager.requestWhenInUseAuthorization()
         
-        /* Set up camera '*/
-        let deviceDiscoverySession = AVCaptureDeviceDiscoverySession(deviceTypes: [AVCaptureDeviceType.builtInDuoCamera, AVCaptureDeviceType.builtInWideAngleCamera,AVCaptureDeviceType.builtInTelephotoCamera], mediaType: AVMediaTypeVideo, position: AVCaptureDevicePosition.unspecified)
-        
-        for device in (deviceDiscoverySession?.devices)! {
-            if(device.position == AVCaptureDevicePosition.back){
-                do {
-                    let input = try AVCaptureDeviceInput(device: device)
-                    if (captureSession.canAddInput(input)) {
-                        
-                        // Add input
-                        captureSession.addInput(input);
-                        
-                        // Set resolution
-                        if (captureSession.canSetSessionPreset(AVCaptureSessionPreset640x480)) {
-                            captureSession.sessionPreset = AVCaptureSessionPreset640x480
-                        }
-                        
-                        // Set camera settings
-                        do {
-                            try device.lockForConfiguration()
-                            
-                            // Set frame rate
-                            device.activeVideoMinFrameDuration = CMTimeMake(1,10)
-                            device.activeVideoMaxFrameDuration = CMTimeMake(1,10)
-                            
-                            // Lock focus to infinity
-                            let focusValue = 1.0
-                            device.setFocusModeLockedWithLensPosition(Float(focusValue), completionHandler: { (time) -> Void in
-                            })
-                            
-                            // Set ISO value
-                            let isoValue = 400
-                            let shutterSpeed = CMTimeMake(1,100)
-                            device.setExposureModeCustomWithDuration(shutterSpeed, iso: Float(isoValue), completionHandler: { (time) -> Void in
-                                //
-                            })
-                            
-                            // Unlock configuration mode
-                            device.unlockForConfiguration()
-                            
-                        } catch {
-                            print("Could not lock camera for configuration.")
-                        }
-                        
-                        // Show preview
-                        /*
-                        previewLayer = AVCaptureVideoPreviewLayer(session: captureSession);
-                        previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
-                        previewLayer.connection.videoOrientation = AVCaptureVideoOrientation.portrait;
-                        cameraView.layer.addSublayer(previewLayer);
-                         */
- 
-                        // Add output
-                        videoOutputStream = AVCaptureVideoDataOutput()
-                        videoOutputStream?.setSampleBufferDelegate(self, queue: captureSessionQueue)
-                        if captureSession.canAddOutput(videoOutputStream) {
-                            captureSession.addOutput(videoOutputStream)
-                        }
-                        
-                        // Save in landscape orientation
-                        let connection = videoOutputStream?.connection(withMediaType: AVFoundation.AVMediaTypeVideo)
-                        connection?.videoOrientation = .landscapeRight
-                       
-                        // startRunning is blocking the main queue, start in its own
-                        captureSessionQueue.async {
-                            self.captureSession.startRunning()
-                        }
-                        
-                        break
-                    }
-                } catch let error as Error! {
-                    print("Problem starting camera: \n \(error)")
-                }
-            }
-        }
-        
         /* Set up ARKit */
         let configuration = ARWorldTrackingConfiguration()
-        arSession.run(configuration)
-        arSession.delegate = self
-
-        /* Draw ARKit preview using OpenGL */
-        glView = GLKView(frame: cameraView.frame, context: glContext!)
-        ciContext = CIContext(eaglContext: glContext!)
+        arView.delegate = self
+        arView.session.run(configuration)
+        arView.session.delegate = self
 
     }
 
@@ -176,8 +86,6 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         toggleButton.layer.borderColor = UIColor.red.cgColor
         toggleButton.layer.backgroundColor = UIColor.white.cgColor
         toggleButton.layer.shadowColor = UIColor.white.cgColor
-        
-        previewLayer.frame = cameraView.bounds
         
     }
     
@@ -269,7 +177,6 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
                     if (error != nil){
                         print("\(error)");
                     }
-                    print("Barometer: ",altitudeData.timestamp)
                     let str = NSString(format:"%f,%d,%f,%f,0\n",
                         altitudeData.timestamp,
                         self.BAROMETER_ID,
@@ -295,7 +202,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
             }
           
             let videoOutputSettings: Dictionary<String, AnyObject> = [
-                AVVideoCodecKey : AVVideoCodecH264 as AnyObject,
+                AVVideoCodecKey : AVVideoCodecType.h264 as AnyObject,
                 AVVideoWidthKey : 1280 as AnyObject,
                 AVVideoHeightKey : 720 as AnyObject
             ]
@@ -409,61 +316,9 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         toggleButton.layer.cornerRadius = toValue
     }
     
-    // MARK: - AVCaptureVideoDataOutputSampleBufferDelegate
-    
-    func captureOutput(_ output: AVCaptureOutput, didDrop sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-        print("Dropped frame.")
-    }
-    
-    func captureOutput(_ captureOutput: AVCaptureOutput!, didOutputSampleBuffer sampleBuffer: CMSampleBuffer!, from connection: AVCaptureConnection!) {
-        /*
-
-        let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
-        let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)
- 
-        // Execute in its own thread
-        captureSessionQueue.async {
-
-            // Start session at first recorded frame
-            if (self.isCapturing && self.assetWriter?.status != AVAssetWriterStatus.writing) {
-                self.assetWriter!.startWriting()
-                self.assetWriter!.startSession(atSourceTime: timestamp)
-            }
-        
-            // If recording is active append bufferImage to video frame
-            while (self.isCapturing) {
-                // Append images to video
-                if (self.videoInput!.isReadyForMoreMediaData) {
-                    
-                    // Append image to video
-                    self.pixelBufferAdaptor?.append(pixelBuffer!, withPresentationTime: timestamp)
-                    
-                    // Append frame to csv
-                    let str = NSString(format:"%f,%d,%d,0,0\n",
-                        CMTimeGetSeconds(timestamp),
-                        self.CAMERA_ID,
-                        self.frameCount)
-                    if self.outputStream.write(str as String) < 0 { print("Write camera failure"); }
-                    self.frameCount = self.frameCount + 1
-                    break
-                }
-            }
-        }
- 
-         */
-    }
-    
     // MARK: -ARSessionDelegate
     @available(iOS 11.0, *)
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
-        
-        let image = CIImage(cvPixelBuffer: frame.capturedImage)
-        if glContext != EAGLContext.current() {
-            EAGLContext.setCurrent(glContext)
-        }
-        glView.bindDrawable()
-        ciContext.draw(image, in:image.extent, from: image.extent)
-        glView.display()
         
         // Timestamp
         let timestamp = CMTimeMakeWithSeconds(frame.timestamp, 1000000)

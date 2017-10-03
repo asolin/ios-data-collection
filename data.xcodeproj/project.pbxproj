@@ -149,7 +149,7 @@
 				TargetAttributes = {
 					65B28B061F7642F80048AFD3 = {
 						CreatedOnToolsVersion = 8.3.3;
-						DevelopmentTeam = 23ATX9NR5T;
+						DevelopmentTeam = V6EZHGKXKJ;
 						ProvisioningStyle = Automatic;
 					};
 					65B28B1A1F7642F80048AFD3 = {
@@ -347,11 +347,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				DEVELOPMENT_TEAM = 23ATX9NR5T;
+				DEVELOPMENT_TEAM = V6EZHGKXKJ;
 				INFOPLIST_FILE = data/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = fi.solin..data;
+				PRODUCT_BUNDLE_IDENTIFIER = Cortess.data;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 3.0;
 			};
@@ -361,11 +361,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				DEVELOPMENT_TEAM = 23ATX9NR5T;
+				DEVELOPMENT_TEAM = V6EZHGKXKJ;
 				INFOPLIST_FILE = data/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = fi.solin..data;
+				PRODUCT_BUNDLE_IDENTIFIER = Cortess.data;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 3.0;
 			};
@@ -420,6 +420,7 @@
 				65B28B261F7642F80048AFD3 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		65B28B271F7642F80048AFD3 /* Build configuration list for PBXNativeTarget "dataTests" */ = {
 			isa = XCConfigurationList;
@@ -428,6 +429,7 @@
 				65B28B291F7642F80048AFD3 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
