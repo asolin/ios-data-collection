@@ -51,6 +51,11 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     /* Manager for ARKit session */
     var arSession = ARSession()
     
+    /* Draw ARKit preview using OpenGL */
+    let glContext = EAGLContext(api: .openGLES2)
+    var glView = GLKView()
+    var ciContext = CIContext()
+
     /* Variables */
     var isCapturing : Bool = false
     var outputStream : OutputStream!
@@ -120,11 +125,13 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
                         }
                         
                         // Show preview
+                        /*
                         previewLayer = AVCaptureVideoPreviewLayer(session: captureSession);
                         previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
                         previewLayer.connection.videoOrientation = AVCaptureVideoOrientation.portrait;
                         cameraView.layer.addSublayer(previewLayer);
-
+                         */
+ 
                         // Add output
                         videoOutputStream = AVCaptureVideoDataOutput()
                         videoOutputStream?.setSampleBufferDelegate(self, queue: captureSessionQueue)
@@ -150,13 +157,14 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         }
         
         /* Set up ARKit */
-        if #available(iOS 11.0, *) {
-            let configuration = ARWorldTrackingConfiguration()
-            arSession.run(configuration)
-            arSession.delegate = self
-        } else {
-            // Fallback on earlier versions
-        }
+        let configuration = ARWorldTrackingConfiguration()
+        arSession.run(configuration)
+        arSession.delegate = self
+
+        /* Draw ARKit preview using OpenGL */
+        glView = GLKView(frame: cameraView.frame, context: glContext!)
+        ciContext = CIContext(eaglContext: glContext!)
+
     }
 
     override func viewDidLayoutSubviews() {
@@ -448,6 +456,14 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     // MARK: -ARSessionDelegate
     @available(iOS 11.0, *)
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
+        
+        let image = CIImage(cvPixelBuffer: frame.capturedImage)
+        if glContext != EAGLContext.current() {
+            EAGLContext.setCurrent(glContext)
+        }
+        glView.bindDrawable()
+        ciContext.draw(image, in:image.extent, from: image.extent)
+        glView.display()
         
         // Timestamp
         let timestamp = CMTimeMakeWithSeconds(frame.timestamp, 1000000)
