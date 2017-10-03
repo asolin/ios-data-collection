@@ -149,7 +149,7 @@
 				TargetAttributes = {
 					65B28B061F7642F80048AFD3 = {
 						CreatedOnToolsVersion = 8.3.3;
-						DevelopmentTeam = V6EZHGKXKJ;
+						DevelopmentTeam = 23ATX9NR5T;
 						ProvisioningStyle = Automatic;
 					};
 					65B28B1A1F7642F80048AFD3 = {
@@ -347,11 +347,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				DEVELOPMENT_TEAM = V6EZHGKXKJ;
+				DEVELOPMENT_TEAM = 23ATX9NR5T;
 				INFOPLIST_FILE = data/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = Cortess.data;
+				PRODUCT_BUNDLE_IDENTIFIER = fi.solin.data;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 3.0;
 			};
@@ -361,11 +361,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				DEVELOPMENT_TEAM = V6EZHGKXKJ;
+				DEVELOPMENT_TEAM = 23ATX9NR5T;
 				INFOPLIST_FILE = data/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = Cortess.data;
+				PRODUCT_BUNDLE_IDENTIFIER = fi.solin.data;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 3.0;
 			};
