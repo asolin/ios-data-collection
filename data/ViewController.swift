@@ -24,6 +24,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     let GYROSCOPE_ID     = 4
     let MAGNETOMETER_ID  = 5
     let BAROMETER_ID     = 6
+    let ARKIT_ID         = 7
     let GRAVITY          = -9.81
     let ACCELEROMETER_DT = 0.01
     let GYROSCOPE_DT     = 0.01
@@ -131,9 +132,9 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
                             captureSession.addOutput(videoOutputStream)
                         }
                         
-                        // Save in portrait orientation
+                        // Save in landscape orientation
                         let connection = videoOutputStream?.connection(withMediaType: AVFoundation.AVMediaTypeVideo)
-                        connection?.videoOrientation = .portrait
+                        connection?.videoOrientation = .landscapeRight
                        
                         // startRunning is blocking the main queue, start in its own
                         captureSessionQueue.async {
@@ -287,8 +288,8 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
           
             let videoOutputSettings: Dictionary<String, AnyObject> = [
                 AVVideoCodecKey : AVVideoCodecH264 as AnyObject,
-                AVVideoWidthKey : 480 as AnyObject,
-                AVVideoHeightKey : 640 as AnyObject
+                AVVideoWidthKey : 1280 as AnyObject,
+                AVVideoHeightKey : 720 as AnyObject
             ]
             
             // If grayscale: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
@@ -407,9 +408,11 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     }
     
     func captureOutput(_ captureOutput: AVCaptureOutput!, didOutputSampleBuffer sampleBuffer: CMSampleBuffer!, from connection: AVCaptureConnection!) {
+        /*
+
         let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
         let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)
-
+ 
         // Execute in its own thread
         captureSessionQueue.async {
 
@@ -438,13 +441,57 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
                 }
             }
         }
+ 
+         */
     }
     
     // MARK: -ARSessionDelegate
     @available(iOS 11.0, *)
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
-        let pos = frame.camera.transform.translation
-        print("ARKit position (",pos[0],", ",pos[1],", ",pos[2],") at ",frame.timestamp)
+        
+        // Timestamp
+        let timestamp = CMTimeMakeWithSeconds(frame.timestamp, 1000000)
+        let translation = frame.camera.transform.translation
+        let eulerAngles = frame.camera.eulerAngles
+        let intrinsics = frame.camera.intrinsics
+        
+        // Execute in its own thread
+        captureSessionQueue.async {
+            
+            // Start session at first recorded frame
+            if (self.isCapturing && self.assetWriter?.status != AVAssetWriterStatus.writing) {
+                self.assetWriter!.startWriting()
+                self.assetWriter!.startSession(atSourceTime: timestamp)
+            }
+
+            // If recording is active append bufferImage to video frame
+            while (self.isCapturing) {
+                // Append images to video
+                if (self.videoInput!.isReadyForMoreMediaData) {
+                    
+                    // Append image to video
+                    self.pixelBufferAdaptor?.append(frame.capturedImage, withPresentationTime: timestamp)
+                    
+                    // Append ARKit to csv
+                    let str = NSString(format:"%f,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
+                        frame.timestamp,
+                        self.ARKIT_ID,
+                        self.frameCount,
+                        translation[0],
+                        translation[1],
+                        translation[2],
+                        eulerAngles[0],
+                        eulerAngles[1],
+                        eulerAngles[2],
+                        intrinsics[0][0], intrinsics[1][1], intrinsics[2][0], intrinsics[2][1])
+                    if self.outputStream.write(str as String) < 0 { print("Write ARKit failure"); }
+                    
+                    self.frameCount = self.frameCount + 1
+                    
+                    break
+                }
+            }
+        }
     }
 }
 
@@ -491,5 +538,4 @@ extension float4x4 {
         return float3(translation.x, translation.y, translation.z)
     }
 }
-
 
