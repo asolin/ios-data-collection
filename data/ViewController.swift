@@ -246,6 +246,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
                     if (error != nil){
                         print("\(error)");
                     }
+                    print("Barometer: ",altitudeData.timestamp)
                     let str = NSString(format:"%f,%d,%f,%f,0\n",
                         altitudeData.timestamp,
                         self.BAROMETER_ID,
@@ -342,22 +343,20 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
             } catch let error as NSError {
                 print("Error occurred while moving data file:\n \(error)")
             }
-            
         }
-        
     }
     
     // MARK: - CLLocationManagerDelegate
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         if (isCapturing) {
-            // Get uptime
-            let systemBoot = Date(timeIntervalSinceReferenceDate: ProcessInfo.processInfo.systemUptime)
-
+            // Time offset
+            let offset = Date().timeIntervalSinceReferenceDate - ProcessInfo.processInfo.systemUptime
+            
             // For each location
             for loc in locations {
                 let str = NSString(format:"%f,%d,%.8f,%.8f,%f,%f,%f,%f\n",
-                    loc.timestamp.timeIntervalSince(systemBoot),
+                    loc.timestamp.timeIntervalSinceReferenceDate-offset,
                     self.LOCATION_ID,
                     loc.coordinate.latitude,
                     loc.coordinate.longitude,
@@ -456,7 +455,6 @@ extension OutputStream {
         
         return -1
     }
-    
 }
 
 
