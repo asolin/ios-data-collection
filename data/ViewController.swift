@@ -215,6 +215,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
             
             videoInput = AVAssetWriterInput(mediaType: AVMediaTypeVideo, outputSettings: videoOutputSettings)
             videoInput?.expectsMediaDataInRealTime = true
+            videoInput?.transform = CGAffineTransform.init(rotationAngle: CGFloat(Double.pi/2))
             pixelBufferAdaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: videoInput!, sourcePixelBufferAttributes: sourceBufferAttributes)
             
             // Add video input and start waiting for data
