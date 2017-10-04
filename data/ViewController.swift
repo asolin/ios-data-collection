@@ -18,6 +18,7 @@ import ARKit
 class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDelegate, ARSCNViewDelegate {
     
     /* Constants */
+    let TIMESTAMP_ID     = 0
     let CAMERA_ID        = 1
     let LOCATION_ID      = 2
     let ACCELEROMETER_ID = 3
@@ -116,6 +117,13 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
                 print("Unable to open file.")
                 return
             }
+            
+            /* Store start time */
+            let str = NSString(format:"%f,%d,%f,0,0\n",
+                ProcessInfo.processInfo.systemUptime,
+                self.TIMESTAMP_ID,
+                Date().timeIntervalSince1970)
+            if self.outputStream.write(str as String) < 0 { print("Write timestamp failure"); }
             
             /* Start accelerometer updates */
             if motionManager.isAccelerometerAvailable && !motionManager.isAccelerometerActive {
