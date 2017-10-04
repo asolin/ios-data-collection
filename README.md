@@ -37,4 +37,13 @@ Data collected through CoreMotion/CMMotionManager). Acquired at 100 Hz, which is
 ### 6 - Barometric altimeter
 Data collected through CoreMotion/CMAltimeter. Acquired at an uneven sampling rate (~1 Hz). Samples are stored as they arrive from the delegare callback. The actual barometric pressure is in `val0` and the inferred relative altutude (calculated by Apple magic) is stored in `val1`.
 
-
+### 7 - ARKit output
+In case of also storing the visual-inertial odometry result calculated by Apple ARKit, the control of the device camera is lost. Instead we can store the camera frames returned by ARKit (no control of setting the resolution, nor locking focus, shutter speed, white balance, etc.). ARKit seems to give video output with the following sepcification (at least on iPhone 6S):
+* Resolution: 1280x720 (portrait)
+* Color
+* Refresh rate: 60 Hz
+The stored values at each ARKit frame are
+* frame number
+* translation (~position)
+* euler angles (~orientation)
+* instrinsic parameters (camera calibration: focal lengths and prinicipal point)
