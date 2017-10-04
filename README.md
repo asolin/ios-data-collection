@@ -42,6 +42,7 @@ In case of also storing the visual-inertial odometry result calculated by Apple 
 * Resolution: 1280x720 (portrait)
 * Color
 * Refresh rate: 60 Hz
+
 The stored values at each ARKit frame are
 * frame number
 * translation (~position)
