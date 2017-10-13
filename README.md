@@ -50,4 +50,4 @@ The stored values at each ARKit frame are
 * frame number
 * translation (~position)
 * euler angles (~orientation)
-* instrinsic parameters (camera calibration: focal lengths and prinicipal point)
+* instrinsic parameters (camera calibration: focal lengths and prinicipal point)  
