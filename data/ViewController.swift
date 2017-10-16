@@ -51,7 +51,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
     var outputStream : OutputStream!
     var filename : String = ""
     var filePath : NSURL!
-    var frameCount = 0;
+    var frameCount = 0
+    var startTime : TimeInterval = 0
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -71,8 +72,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
         locationManager.requestWhenInUseAuthorization()
         
         /* Set up ARKit */
-        let configuration = ARWorldTrackingConfiguration()
         arView.delegate = self
+        let configuration = ARWorldTrackingConfiguration()
         arView.session.run(configuration)
         arView.session.delegate = self
 
@@ -99,6 +100,9 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
         
         if (!isCapturing) {
             
+            // Pause ARKit for resetting
+            arView.session.pause()
+            
             print("Attempting to start capture");
             
             /* Create filename for the data */
@@ -119,8 +123,9 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
             }
             
             /* Store start time */
+            startTime = ProcessInfo.processInfo.systemUptime
             let str = NSString(format:"%f,%d,%f,0,0\n",
-                ProcessInfo.processInfo.systemUptime,
+                startTime,
                 self.TIMESTAMP_ID,
                 Date().timeIntervalSince1970)
             if self.outputStream.write(str as String) < 0 { print("Write timestamp failure"); }
@@ -229,6 +234,11 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
             // Add video input and start waiting for data
             assetWriter!.add(videoInput!)
             
+            // Start ARKit
+            let configuration = ARWorldTrackingConfiguration()
+            configuration.planeDetection = .horizontal
+            arView.session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
+            
             // Reset frame count
             frameCount = 0;
             
@@ -329,28 +339,30 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
     @available(iOS 11.0, *)
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
         
-        // Timestamp
-        let timestamp = CMTimeMakeWithSeconds(frame.timestamp, 1000000)
-        let translation = frame.camera.transform.translation
-        let eulerAngles = frame.camera.eulerAngles
-        let intrinsics = frame.camera.intrinsics
-        
         // Execute in its own thread
         captureSessionQueue.async {
             
+            // Timestamp
+            let timestamp = CMTimeMakeWithSeconds(frame.timestamp, 1000000)
+
             // Start session at first recorded frame
-            if (self.isCapturing && self.assetWriter?.status != AVAssetWriterStatus.writing) {
+            if (self.isCapturing && frame.timestamp > self.startTime && self.assetWriter?.status != AVAssetWriterStatus.writing) {
                 self.assetWriter!.startWriting()
                 self.assetWriter!.startSession(atSourceTime: timestamp)
             }
-
+            
             // If recording is active append bufferImage to video frame
-            while (self.isCapturing) {
+            while (self.isCapturing && frame.timestamp > self.startTime) {
+                
                 // Append images to video
                 if (self.videoInput!.isReadyForMoreMediaData) {
                     
                     // Append image to video
                     self.pixelBufferAdaptor?.append(frame.capturedImage, withPresentationTime: timestamp)
+                    
+                    let translation = frame.camera.transform.translation
+                    let eulerAngles = frame.camera.eulerAngles
+                    let intrinsics = frame.camera.intrinsics
                     
                     // Append ARKit to csv
                     let str = NSString(format:"%f,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
