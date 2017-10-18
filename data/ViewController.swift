@@ -109,6 +109,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
             let date = Date()
             let formatter = DateFormatter()
             formatter.dateFormat = "yyyy-MM-dd-HH-mm-ss"
+            formatter.timeZone = TimeZone(secondsFromGMT: 0)
             filename = "data-" + formatter.string(from: date)
             print(filename)
             
