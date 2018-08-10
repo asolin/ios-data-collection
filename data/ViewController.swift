@@ -364,19 +364,19 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
                     let translation = frame.camera.transform.translation
                     let eulerAngles = frame.camera.eulerAngles
                     let intrinsics = frame.camera.intrinsics
+                    let transform = frame.camera.transform
                     
                     // Append ARKit to csv
-                    let str = NSString(format:"%f,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
+                    let str = NSString(format:"%f,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
                         frame.timestamp,
                         self.ARKIT_ID,
                         self.frameCount,
-                        translation[0],
-                        translation[1],
-                        translation[2],
-                        eulerAngles[0],
-                        eulerAngles[1],
-                        eulerAngles[2],
-                        intrinsics[0][0], intrinsics[1][1], intrinsics[2][0], intrinsics[2][1])
+                        translation[0], translation[1], translation[2],
+                        eulerAngles[0], eulerAngles[1], eulerAngles[2],
+                        intrinsics[0][0], intrinsics[1][1], intrinsics[2][0], intrinsics[2][1],
+                        transform[0][0],transform[1][0],transform[2][0],
+                        transform[0][1],transform[1][1],transform[2][1],
+                        transform[0][2],transform[1][2],transform[2][2])
                     if self.outputStream.write(str as String) < 0 { print("Write ARKit failure"); }
                     
                     self.frameCount = self.frameCount + 1
