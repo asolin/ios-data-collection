@@ -7,7 +7,7 @@ This app is for collecting time-synched visual and indertial (IMU) data on Apple
 All data observations are stored in a CSV file with the format `timestamp, type, val0, val1, ...` and the video frames in an accompanying MOV file (filenames are `data-yyyy-MM-dd-HH-mm-ss` in UTC). The `timestamp` is the one directly reported by the delegate methods in the APIs (no post-processing done). The `type` fields are according to the following:
 
 ### 0 - Initial timestamp
-The first stored data item is the start time of the data collection session in both the senosor time and unix time. The timestamp of this event is received from the system uptime and `val0` corresponds to the current unix time.
+The first stored data item is the start time of the data collection session in both the senosor time and unix time. The timestamp of this event is received from the system uptime and `val0` corresponds to the current unix time from the device (might be off, it appears), and `val1` to the NTP network unix time requested from NTP servers using Kronos.
 
 ### 1 - Camera frames
 Data collected through AVFoundation. The actual frame timestamps are reported together with the frame number (`val0`) in the CSV. Current camera defaults are set as follows:

@@ -13,6 +13,7 @@ import CoreImage
 import AVFoundation
 import CoreLocation
 import ARKit
+import Kronos
 
 @available(iOS 11.0, *)
 class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDelegate, ARSCNViewDelegate {
@@ -62,6 +63,9 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
         tap.numberOfTapsRequired = 1
         toggleButton.addGestureRecognizer(tap);
         
+        // Sync clock
+        Clock.sync()
+
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -100,6 +104,9 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
         
         if (!isCapturing) {
             
+            // Sync clock
+            Clock.sync()
+            
             // Pause ARKit for resetting
             arView.session.pause()
             
@@ -125,10 +132,11 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
             
             /* Store start time */
             startTime = ProcessInfo.processInfo.systemUptime
-            let str = NSString(format:"%f,%d,%f,0,0\n",
+            let str = NSString(format:"%f,%d,%f,%f,0\n",
                 startTime,
                 self.TIMESTAMP_ID,
-                Date().timeIntervalSince1970)
+                Date().timeIntervalSince1970,
+                Clock.now!.timeIntervalSince1970)
             if self.outputStream.write(str as String) < 0 { print("Write timestamp failure"); }
             
             /* Start accelerometer updates */
