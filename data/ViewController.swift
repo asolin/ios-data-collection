@@ -27,6 +27,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
     let MAGNETOMETER_ID  = 5
     let BAROMETER_ID     = 6
     let ARKIT_ID         = 7
+    let POINTCLOUD_ID    = 8;
     let GRAVITY          = -9.81
     let ACCELEROMETER_DT = 0.01
     let GYROSCOPE_DT     = 0.01
@@ -386,6 +387,39 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
                         transform[0][1],transform[1][1],transform[2][1],
                         transform[0][2],transform[1][2],transform[2][2])
                     if self.outputStream.write(str as String) < 0 { print("Write ARKit failure"); }
+                    
+                    // Append ARKit point cloud to csv
+                    if let featurePointsArray = frame.rawFeaturePoints?.points {
+                        var pstr = NSString(format:"%f,%d,%d",
+                                           frame.timestamp,
+                                           self.POINTCLOUD_ID,
+                                           self.frameCount)
+                        // Append each point to str
+                        for point in featurePointsArray {
+                            pstr = NSString(format:"%@,%f,%f,%f",
+                                           pstr,
+                                           point.x, point.y, point.z)
+                        }
+                        pstr = NSString(format:"%@\n", pstr)
+                        if self.outputStream.write(pstr as String) < 0 { print("Write ARKit point cloud failure"); }
+                    }
+                    
+                    // Append ARKit projection matrix to csv
+                    //let projMat = frame.camera.projectionMatrix;
+                    //let projMat = frame.displayTransform(for: UIInterfaceOrientation.portrait, viewportSize: frame.camera.imageResolution)
+                    //let projMat = frame.camera.projectionMatrix(for: UIInterfaceOrientation.portrait, viewportSize: frame.camera.imageResolution, zNear: 0.01, zFar: 1000.0)
+                    let projMat = frame.camera.viewMatrix(for: UIInterfaceOrientation.portrait)
+                    let fstr = NSString(format:"%f,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
+                                       frame.timestamp,
+                                       10,
+                                       projMat[0][0],projMat[0][1],projMat[0][2],
+                                       projMat[1][0],projMat[1][1],projMat[1][2],
+                                       projMat[2][0],projMat[2][1],projMat[2][2],
+                                       projMat[3][0],projMat[3][1],projMat[3][2])
+                    if self.outputStream.write(fstr as String) < 0 { print("Write ARKit projection failure"); }
+                    
+                    print("Transform:",transform)
+                    print(projMat)
                     
                     self.frameCount = self.frameCount + 1
                     
