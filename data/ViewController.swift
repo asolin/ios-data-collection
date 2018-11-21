@@ -85,13 +85,28 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
 
     override func viewDidLayoutSubviews() {
         
-        toggleButton.frame = CGRect(x: (self.view.frame.size.width - 80) / 2, y: (self.view.frame.size.height - 100), width: 80, height: 80)
+        //toggleButton.frame = CGRect(x: (self.view.frame.size.width - 80) / 2, y: (self.view.frame.size.height - 100), width: 80, height: 80)
+        
         toggleButton.layer.borderWidth = 2
-        toggleButton.layer.cornerRadius = toggleButton.frame.height/2.0
-        toggleButton.layer.masksToBounds = true
-        toggleButton.layer.borderColor = UIColor.red.cgColor
-        toggleButton.layer.backgroundColor = UIColor.white.cgColor
-        toggleButton.layer.shadowColor = UIColor.white.cgColor
+        
+        if (isCapturing) {
+            
+            
+            animateButtonRadius(toValue: toggleButton.frame.height/4.0)
+            toggleButton.layer.masksToBounds = true
+            
+            toggleButton.layer.borderColor = UIColor.green.cgColor
+            toggleButton.layer.backgroundColor = UIColor.white.cgColor
+            toggleButton.layer.shadowColor = UIColor.white.cgColor
+        } else {
+            
+            animateButtonRadius(toValue: toggleButton.frame.height/2.0)
+            toggleButton.layer.masksToBounds = true
+            
+            toggleButton.layer.borderColor = UIColor.red.cgColor
+            toggleButton.layer.backgroundColor = UIColor.white.cgColor
+            toggleButton.layer.shadowColor = UIColor.white.cgColor
+        }
         
     }
     
@@ -131,122 +146,24 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
             }
             
             /* Store start time */
-            startTime = ProcessInfo.processInfo.systemUptime
-            let str = NSString(format:"%f,%d,%f,%f,0\n",
-                startTime,
-                self.TIMESTAMP_ID,
-                Date().timeIntervalSince1970,
-                Clock.now!.timeIntervalSince1970)
-            if self.outputStream.write(str as String) < 0 { print("Write timestamp failure"); }
+//            startTime = ProcessInfo.processInfo.systemUptime
+//            let str = NSString(format:"%f,%d,%f,%f,0\n",
+//                startTime,
+//                self.TIMESTAMP_ID,
+//                Date().timeIntervalSince1970,
+//                Clock.now!.timeIntervalSince1970)
+//            if self.outputStream.write(str as String) < 0 { print("Write timestamp failure"); }
             
             /* Start accelerometer updates */
-            if motionManager.isAccelerometerAvailable && !motionManager.isAccelerometerActive {
-                motionManager.accelerometerUpdateInterval = self.ACCELEROMETER_DT
-                motionManager.startAccelerometerUpdates(to: OperationQueue.current!, withHandler: {(accelerometerData: CMAccelerometerData!, error: Error!) in
-                    if (error != nil){
-                        print("\(error)");
-                    }
-                    let str = NSString(format:"%f,%d,%f,%f,%f\n",
-                        accelerometerData.timestamp,
-                        self.ACCELEROMETER_ID,
-                        accelerometerData.acceleration.x * self.GRAVITY,
-                        accelerometerData.acceleration.y * self.GRAVITY,
-                        accelerometerData.acceleration.z * self.GRAVITY)
-                    if self.outputStream.write(str as String) < 0 { print("Write accelerometer failure"); }
-                    } as CMAccelerometerHandler)
-            } else {
-                print("No accelerometer available.");
-            }
+            /* Setup Data Acquisition */
+            runAccDataAcquisition()
+            runGyroDataAcquisition()
+            runMagnetometerDataAcquisition()
+            runBarometerDataAcquisition()
+            runLocation();
+            // Start ARKit and Video
+            runVideoAndARKitRecording()
             
-            /* Start gyroscope updates */
-            if motionManager.isGyroAvailable && !motionManager.isGyroActive {
-                motionManager.gyroUpdateInterval = self.GYROSCOPE_DT
-                motionManager.startGyroUpdates(to: OperationQueue.current!, withHandler: {(gyroData: CMGyroData!, error: Error!) in
-                    let str = NSString(format:"%f,%d,%f,%f,%f\n",
-                        gyroData.timestamp,
-                        self.GYROSCOPE_ID,
-                        gyroData.rotationRate.x,
-                        gyroData.rotationRate.y,
-                        gyroData.rotationRate.z)
-                    if self.outputStream.write(str as String) < 0 { print("Write gyroscope failure"); }
-                } as CMGyroHandler)
-            } else {
-                print("No gyroscope available.");
-            }
-            
-            /* Start magnetometer updates */
-            if motionManager.isMagnetometerAvailable && !motionManager.isMagnetometerActive {
-                motionManager.magnetometerUpdateInterval = self.MAGNETOMETER_DT
-                motionManager.startMagnetometerUpdates(to: OperationQueue.current!, withHandler: {(magnetometerData: CMMagnetometerData!, error: Error!) in
-                    if (error != nil){
-                        print("\(error)");
-                    }
-                    let str = NSString(format:"%f,%d,%f,%f,%f\n",
-                        magnetometerData.timestamp,
-                        self.MAGNETOMETER_ID,
-                        magnetometerData.magneticField.x,
-                        magnetometerData.magneticField.y,
-                        magnetometerData.magneticField.z)
-                    if self.outputStream.write(str as String) < 0 { print("Write magnetometer failure"); }
-                } as CMMagnetometerHandler)
-            } else {
-                print("No magnetometer available.");
-            }
-            
-            /* Start barometer updates */
-            if CMAltimeter.isRelativeAltitudeAvailable() {
-                altimeter.startRelativeAltitudeUpdates(to: OperationQueue.current!, withHandler: {(altitudeData: CMAltitudeData!, error: Error!)in
-                    if (error != nil){
-                        print("\(error)");
-                    }
-                    let str = NSString(format:"%f,%d,%f,%f,0\n",
-                        altitudeData.timestamp,
-                        self.BAROMETER_ID,
-                        altitudeData.pressure.doubleValue,
-                        altitudeData.relativeAltitude.doubleValue)
-                    if self.outputStream.write(str as String) < 0 { print("Write barometer failure"); }
-                } as CMAltitudeHandler)
-            } else {
-                print("No barometer available.");
-            }
-            
-            /* Start location updates */
-            locationManager.startUpdatingLocation()
-            
-            /* Start video asset writing */
-            let videoPath = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(filename).appendingPathExtension("mov")
-            
-            do {
-                assetWriter = try AVAssetWriter(outputURL: videoPath, fileType: AVFileTypeQuickTimeMovie )
-            } catch {
-                print("Error converting images to video: asset initialization error")
-                return
-            }
-          
-            let videoOutputSettings: Dictionary<String, AnyObject> = [
-                AVVideoCodecKey : AVVideoCodecType.h264 as AnyObject,
-                AVVideoWidthKey : 1280 as AnyObject,
-                AVVideoHeightKey : 720 as AnyObject
-            ]
-            
-            // If grayscale: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
-            // If color: kCVPixelFormatType_32BGRA / kCVPixelFormatType_32ARGB
-            let sourceBufferAttributes : [String : AnyObject] = [
-                kCVPixelBufferPixelFormatTypeKey as String : Int(kCVPixelFormatType_32BGRA) as AnyObject,
-            ]
-            
-            videoInput = AVAssetWriterInput(mediaType: AVMediaTypeVideo, outputSettings: videoOutputSettings)
-            videoInput?.expectsMediaDataInRealTime = true
-            videoInput?.transform = CGAffineTransform.init(rotationAngle: CGFloat(Double.pi/2))
-            pixelBufferAdaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: videoInput!, sourcePixelBufferAttributes: sourceBufferAttributes)
-            
-            // Add video input and start waiting for data
-            assetWriter!.add(videoInput!)
-            
-            // Start ARKit
-            let configuration = ARWorldTrackingConfiguration()
-            configuration.planeDetection = .horizontal
-            arView.session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
             
             // Reset frame count
             frameCount = 0;
@@ -254,7 +171,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
             /* Start capturing */
             isCapturing = true;
             self.toggleButton.setTitle("Stop", for: .normal);
-            animateButtonRadius(toValue: toggleButton.frame.height/10.0)
+            //animateButtonRadius(toValue: toggleButton.frame.height/10.0)
             UIApplication.shared.isIdleTimerDisabled = true
             
             print("Recording started!")
@@ -266,28 +183,34 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
             /* Stop capturing */
             isCapturing = false
             self.toggleButton.setTitle("Start", for: .normal)
-            animateButtonRadius(toValue: toggleButton.frame.height/2.0)
+            //animateButtonRadius(toValue: toggleButton.frame.height/2.0)
             UIApplication.shared.isIdleTimerDisabled = false
             
             /* Stop asset writer */
-            assetWriter!.finishWriting{
-                print("Asset writer stopped.")
+            if (UserDefaults.standard.bool(forKey: SettingsKeys.VideoARKitEnableKey)){
+                assetWriter!.finishWriting{
+                    print("Asset writer stopped.")
+                }
             }
             
             /* Move video file */
             let documentsPath = try! FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-            let destinationVideoPath = NSURL(fileURLWithPath: documentsPath.absoluteString).appendingPathComponent(filename)?.appendingPathExtension("mov")
             let fileManager = FileManager.default
-            do {
-                try fileManager.moveItem(at: assetWriter!.outputURL, to: destinationVideoPath!)
-            } catch let error as NSError {
-                print("Error occurred while moving video file:\n \(error)")
+            if (UserDefaults.standard.bool(forKey: SettingsKeys.VideoARKitEnableKey)) {
+                
+                let destinationVideoPath = NSURL(fileURLWithPath: documentsPath.absoluteString).appendingPathComponent(filename)?.appendingPathExtension("mov")
+                
+                do {
+                    try fileManager.moveItem(at: assetWriter!.outputURL, to: destinationVideoPath!)
+                } catch let error as NSError {
+                    print("Error occurred while moving video file:\n \(error)")
+                }
             }
             
             /* Stop capture */
-            motionManager.stopAccelerometerUpdates();
-            motionManager.stopGyroUpdates();
-            motionManager.stopMagnetometerUpdates();
+            if (motionManager.isAccelerometerActive) {motionManager.stopAccelerometerUpdates(); }
+            if (motionManager.isGyroActive) { motionManager.stopGyroUpdates(); }
+            if (motionManager.isMagnetometerActive) { motionManager.stopMagnetometerUpdates(); }
             altimeter.stopRelativeAltitudeUpdates();
             locationManager.stopUpdatingLocation()
             
@@ -348,52 +271,205 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
     @available(iOS 11.0, *)
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
         
-        // Execute in its own thread
-        captureSessionQueue.async {
+        if (UserDefaults.standard.bool(forKey: SettingsKeys.VideoARKitEnableKey)){
             
-            // Timestamp
-            let timestamp = CMTimeMakeWithSeconds(frame.timestamp, 1000000)
-
-            // Start session at first recorded frame
-            if (self.isCapturing && frame.timestamp > self.startTime && self.assetWriter?.status != AVAssetWriterStatus.writing) {
-                self.assetWriter!.startWriting()
-                self.assetWriter!.startSession(atSourceTime: timestamp)
-            }
-            
-            // If recording is active append bufferImage to video frame
-            while (self.isCapturing && frame.timestamp > self.startTime) {
+            // Execute in its own thread
+            captureSessionQueue.async {
                 
-                // Append images to video
-                if (self.videoInput!.isReadyForMoreMediaData) {
+                // Timestamp
+                let timestamp = CMTimeMakeWithSeconds(frame.timestamp, 1000000)
+
+                // Start session at first recorded frame
+                if (self.isCapturing && frame.timestamp > self.startTime && self.assetWriter?.status != AVAssetWriterStatus.writing) {
+                    self.assetWriter!.startWriting()
+                    self.assetWriter!.startSession(atSourceTime: timestamp)
+                }
+                
+                // If recording is active append bufferImage to video frame
+                while (self.isCapturing && frame.timestamp > self.startTime) {
                     
-                    // Append image to video
-                    self.pixelBufferAdaptor?.append(frame.capturedImage, withPresentationTime: timestamp)
-                    
-                    let translation = frame.camera.transform.translation
-                    let eulerAngles = frame.camera.eulerAngles
-                    let intrinsics = frame.camera.intrinsics
-                    let transform = frame.camera.transform
-                    
-                    // Append ARKit to csv
-                    let str = NSString(format:"%f,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
-                        frame.timestamp,
-                        self.ARKIT_ID,
-                        self.frameCount,
-                        translation[0], translation[1], translation[2],
-                        eulerAngles[0], eulerAngles[1], eulerAngles[2],
-                        intrinsics[0][0], intrinsics[1][1], intrinsics[2][0], intrinsics[2][1],
-                        transform[0][0],transform[1][0],transform[2][0],
-                        transform[0][1],transform[1][1],transform[2][1],
-                        transform[0][2],transform[1][2],transform[2][2])
-                    if self.outputStream.write(str as String) < 0 { print("Write ARKit failure"); }
-                    
-                    self.frameCount = self.frameCount + 1
-                    
-                    break
+                    // Append images to video
+                    if (self.videoInput!.isReadyForMoreMediaData) {
+                        
+                        // Append image to video
+                        self.pixelBufferAdaptor?.append(frame.capturedImage, withPresentationTime: timestamp)
+                        
+                        let translation = frame.camera.transform.translation
+                        let eulerAngles = frame.camera.eulerAngles
+                        let intrinsics = frame.camera.intrinsics
+                        let transform = frame.camera.transform
+                        
+                        // Append ARKit to csv
+                        let str = NSString(format:"%f,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
+                            frame.timestamp,
+                            self.ARKIT_ID,
+                            self.frameCount,
+                            translation[0], translation[1], translation[2],
+                            eulerAngles[0], eulerAngles[1], eulerAngles[2],
+                            intrinsics[0][0], intrinsics[1][1], intrinsics[2][0], intrinsics[2][1],
+                            transform[0][0],transform[1][0],transform[2][0],
+                            transform[0][1],transform[1][1],transform[2][1],
+                            transform[0][2],transform[1][2],transform[2][2])
+                        if self.outputStream.write(str as String) < 0 { print("Write ARKit failure"); }
+                        
+                        self.frameCount = self.frameCount + 1
+                        
+                        break
+                    }
                 }
             }
         }
     }
+    
+    
+    func runAccDataAcquisition () {
+        
+        if (UserDefaults.standard.bool(forKey: SettingsKeys.AccEnableKey)){
+            
+            if motionManager.isAccelerometerAvailable && !motionManager.isAccelerometerActive {
+                
+                motionManager.accelerometerUpdateInterval = self.ACCELEROMETER_DT
+                motionManager.startAccelerometerUpdates(to: OperationQueue.current!, withHandler: {(accelerometerData: CMAccelerometerData!, error: Error!) in
+                    if (error != nil){
+                        
+                        print("\(String(describing: error))");
+                    }
+                    
+                    let str = NSString(format:"%f,%d,%f,%f,%f\n",
+                                       accelerometerData.timestamp,
+                                       self.ACCELEROMETER_ID,
+                                       accelerometerData.acceleration.x * self.GRAVITY,
+                                       accelerometerData.acceleration.y * self.GRAVITY,
+                                       accelerometerData.acceleration.z * self.GRAVITY)
+                    if self.outputStream.write(str as String) < 0 { print("Write accelerometer failure"); }
+                    } as CMAccelerometerHandler)
+            } else {
+                print("No accelerometer available.");
+            }
+        }
+    }
+    
+    
+    func runGyroDataAcquisition () {
+        
+        if (UserDefaults.standard.bool(forKey: SettingsKeys.GyroEnableKey)){
+            
+            if motionManager.isAccelerometerAvailable && !motionManager.isAccelerometerActive {
+                motionManager.accelerometerUpdateInterval = self.ACCELEROMETER_DT
+                motionManager.startAccelerometerUpdates(to: OperationQueue.current!, withHandler: {(accelerometerData: CMAccelerometerData!, error: Error!) in
+                    if (error != nil){
+                        print("\(String(describing: error))");
+                    }
+                    let str = NSString(format:"%f,%d,%f,%f,%f\n",
+                                       accelerometerData.timestamp,
+                                       self.ACCELEROMETER_ID,
+                                       accelerometerData.acceleration.x * self.GRAVITY,
+                                       accelerometerData.acceleration.y * self.GRAVITY,
+                                       accelerometerData.acceleration.z * self.GRAVITY)
+                    if self.outputStream.write(str as String) < 0 { print("Write accelerometer failure"); }
+                    } as CMAccelerometerHandler)
+            } else {
+                print("No accelerometer available.");
+            }
+        }
+    }
+    
+    
+    func runMagnetometerDataAcquisition () {
+        
+        if (UserDefaults.standard.bool(forKey: SettingsKeys.MagnetEnableKey)){
+            
+            if motionManager.isMagnetometerAvailable && !motionManager.isMagnetometerActive {
+                motionManager.magnetometerUpdateInterval = self.MAGNETOMETER_DT
+                motionManager.startMagnetometerUpdates(to: OperationQueue.current!, withHandler: {(magnetometerData: CMMagnetometerData!, error: Error!) in
+                    if (error != nil){
+                        print("\(String(describing: error))");
+                    }
+                    let str = NSString(format:"%f,%d,%f,%f,%f\n",
+                                       magnetometerData.timestamp,
+                                       self.MAGNETOMETER_ID,
+                                       magnetometerData.magneticField.x,
+                                       magnetometerData.magneticField.y,
+                                       magnetometerData.magneticField.z)
+                    if self.outputStream.write(str as String) < 0 { print("Write magnetometer failure"); }
+                    } as CMMagnetometerHandler)
+            } else {
+                print("No magnetometer available.");
+            }
+        }
+    }
+    
+    
+    
+    func runBarometerDataAcquisition () {
+        
+        if (UserDefaults.standard.bool(forKey: SettingsKeys.BarometerEnableKey)){
+            
+            if CMAltimeter.isRelativeAltitudeAvailable() {
+                altimeter.startRelativeAltitudeUpdates(to: OperationQueue.current!, withHandler: {(altitudeData: CMAltitudeData!, error: Error!)in
+                    if (error != nil){
+                        print("\(String(describing: error))");
+                    }
+                    let str = NSString(format:"%f,%d,%f,%f,0\n",
+                                       altitudeData.timestamp,
+                                       self.BAROMETER_ID,
+                                       altitudeData.pressure.doubleValue,
+                                       altitudeData.relativeAltitude.doubleValue)
+                    if self.outputStream.write(str as String) < 0 { print("Write barometer failure"); }
+                    } as CMAltitudeHandler)
+            } else {
+                print("No barometer available.");
+            }
+        }
+    }
+    
+    
+    func runVideoAndARKitRecording () {
+        
+        if (UserDefaults.standard.bool(forKey: SettingsKeys.VideoARKitEnableKey)){
+            
+            let videoPath = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(filename).appendingPathExtension("mov")
+            
+            do {
+                assetWriter = try AVAssetWriter(outputURL: videoPath, fileType: AVFileTypeQuickTimeMovie )
+            } catch {
+                print("Error converting images to video: asset initialization error")
+                return
+            }
+            
+            let videoOutputSettings: Dictionary<String, AnyObject> = [
+                AVVideoCodecKey : AVVideoCodecType.h264 as AnyObject,
+                AVVideoWidthKey : 1280 as AnyObject,
+                AVVideoHeightKey : 720 as AnyObject
+            ]
+            
+            // If grayscale: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
+            // If color: kCVPixelFormatType_32BGRA / kCVPixelFormatType_32ARGB
+            let sourceBufferAttributes : [String : AnyObject] = [
+                kCVPixelBufferPixelFormatTypeKey as String : Int(kCVPixelFormatType_32BGRA) as AnyObject,
+                ]
+            
+            videoInput = AVAssetWriterInput(mediaType: AVMediaTypeVideo, outputSettings: videoOutputSettings)
+            videoInput?.expectsMediaDataInRealTime = true
+            videoInput?.transform = CGAffineTransform.init(rotationAngle: CGFloat(Double.pi/2))
+            pixelBufferAdaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: videoInput!, sourcePixelBufferAttributes: sourceBufferAttributes)
+            
+            // Add video input and start waiting for data
+            assetWriter!.add(videoInput!)
+        }
+        
+        let configuration = ARWorldTrackingConfiguration()
+        configuration.planeDetection = .horizontal
+        arView.session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
+    }
+    
+    
+    func runLocation() {
+        if (UserDefaults.standard.bool(forKey: SettingsKeys.LocationEnableKey)){
+            locationManager.startUpdatingLocation()
+        }
+    }
+    
 }
 
 // MARK: - OutputStream: Write Strings

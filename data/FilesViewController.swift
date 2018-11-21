@@ -55,6 +55,7 @@ class FilesViewController: UIViewController, UITableViewDataSource, UITableViewD
         let cell:UITableViewCell = tableView.dequeueReusableCell(withIdentifier: "myCell")!
         let list = listFilesFromDocumentsFolder()
         cell.textLabel?.text = list?[indexPath.row]
+        cell.imageView?.image = UIImage(named: "file")
         return cell
     }
     
