@@ -18,6 +18,8 @@ import Kronos
 @available(iOS 11.0, *)
 class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDelegate, ARSCNViewDelegate {
     
+    
+    
     /* Constants */
     let TIMESTAMP_ID     = 0
     let CAMERA_ID        = 1
@@ -27,19 +29,27 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
     let MAGNETOMETER_ID  = 5
     let BAROMETER_ID     = 6
     let ARKIT_ID         = 7
+    let POINTCLOUD_ID    = 8
     let GRAVITY          = -9.81
     let ACCELEROMETER_DT = 0.01
     let GYROSCOPE_DT     = 0.01
     let MAGNETOMETER_DT  = 0.01
 
+    
+    
     /* Outlets */
     @IBOutlet weak var toggleButton: UIButton!
     @IBOutlet weak var arView: ARSCNView!
+    @IBOutlet weak var timeLabel: UILabel!
+    
+    
     
     /* Managers for the sensor data */
     let motionManager = CMMotionManager()
     let altimeter = CMAltimeter()
     var locationManager = CLLocationManager()
+    
+    
     
     /* Manager for camera data */
     let captureSessionQueue: DispatchQueue = DispatchQueue(label: "sampleBuffer", attributes: [])
@@ -47,13 +57,18 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
     var pixelBufferAdaptor : AVAssetWriterInputPixelBufferAdaptor?
     var videoInput : AVAssetWriterInput?
 
+    
+    
     /* Variables */
     var isCapturing : Bool = false
     var outputStream : OutputStream!
+    var pointcloudStream : OutputStream!
     var filename : String = ""
     var filePath : NSURL!
     var frameCount = 0
     var startTime : TimeInterval = 0
+    var firstArFrame : Bool = true
+    var firstFrameTimestamp : TimeInterval = 0.0
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -68,6 +83,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
 
     }
     
+    
+    
     override func viewWillAppear(_ animated: Bool) {
         
         /* Set up locationManager */
@@ -81,16 +98,17 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
         arView.session.run(configuration)
         arView.session.delegate = self
 
+        timeLabel.text = ""
     }
 
+    
+    
+    
     override func viewDidLayoutSubviews() {
-        
-        //toggleButton.frame = CGRect(x: (self.view.frame.size.width - 80) / 2, y: (self.view.frame.size.height - 100), width: 80, height: 80)
-        
+
         toggleButton.layer.borderWidth = 2
         
         if (isCapturing) {
-            
             
             animateButtonRadius(toValue: toggleButton.frame.height/4.0)
             toggleButton.layer.masksToBounds = true
@@ -98,6 +116,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
             toggleButton.layer.borderColor = UIColor.green.cgColor
             toggleButton.layer.backgroundColor = UIColor.white.cgColor
             toggleButton.layer.shadowColor = UIColor.white.cgColor
+            
         } else {
             
             animateButtonRadius(toValue: toggleButton.frame.height/2.0)
@@ -110,10 +129,14 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
         
     }
     
+    
+    
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
     }
+    
+    
     
     func toggleCapture(_ sender: UITapGestureRecognizer) {
         
@@ -145,6 +168,26 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
                 return
             }
             
+            if (UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey)) {
+                filePath = NSURL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(filename)!.appendingPathExtension("pcl") as NSURL
+                print("\(filePath!)")
+                pointcloudStream = OutputStream(url: filePath as URL, append: false)
+                if pointcloudStream != nil {
+                    pointcloudStream.open()
+                } else {
+                    print("Unable to open pointcloud file.")
+                    return
+                }
+            }
+            
+            
+            let fileMngr = FileManager.default;
+            
+            let docs = fileMngr.urls(for: .documentDirectory, in: .userDomainMask)[0].path
+            
+            
+            
+            
             /* Store start time */
 //            startTime = ProcessInfo.processInfo.systemUptime
 //            let str = NSString(format:"%f,%d,%f,%f,0\n",
@@ -167,6 +210,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
             
             // Reset frame count
             frameCount = 0;
+            firstArFrame = true
+            
             
             /* Start capturing */
             isCapturing = true;
@@ -180,11 +225,13 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
             
             print("Attempting to stop capture");
             
+            
             /* Stop capturing */
             isCapturing = false
             self.toggleButton.setTitle("Start", for: .normal)
             //animateButtonRadius(toValue: toggleButton.frame.height/2.0)
             UIApplication.shared.isIdleTimerDisabled = false
+            
             
             /* Stop asset writer */
             if (UserDefaults.standard.bool(forKey: SettingsKeys.VideoARKitEnableKey)){
@@ -192,6 +239,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
                     print("Asset writer stopped.")
                 }
             }
+            
             
             /* Move video file */
             let documentsPath = try! FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
@@ -207,6 +255,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
                 }
             }
             
+            
             /* Stop capture */
             if (motionManager.isAccelerometerActive) {motionManager.stopAccelerometerUpdates(); }
             if (motionManager.isGyroActive) { motionManager.stopGyroUpdates(); }
@@ -214,8 +263,14 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
             altimeter.stopRelativeAltitudeUpdates();
             locationManager.stopUpdatingLocation()
             
+            
             /* Close output stream */
             outputStream.close()
+            if (UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey)) {
+                pointcloudStream.close()
+                
+            }
+            
             
             /* Move data file */
             let destinationPath = NSURL(fileURLWithPath: documentsPath.absoluteString).appendingPathComponent(filename)?.appendingPathExtension("csv")
@@ -224,11 +279,21 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
             } catch let error as NSError {
                 print("Error occurred while moving data file:\n \(error)")
             }
+            
+            if (UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey)) {
+                let pclDestinationFile = NSURL(fileURLWithPath: documentsPath.absoluteString).appendingPathComponent(filename)?.appendingPathExtension("pcl")
+                do {
+                    try fileManager.moveItem(at: filePath as URL, to: pclDestinationFile!)
+                } catch let error as NSError {
+                    print("Error occurred while moving pointcloud file:\n \(error)")
+                }
+            }
         }
     }
     
-    // MARK: - CLLocationManagerDelegate
     
+    
+    // MARK: - CLLocationManagerDelegate
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         if (isCapturing) {
             // Time offset
@@ -250,13 +315,16 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
         }
     }
     
-    // MARK: - Unwind action for the extra view
     
+    
+    // MARK: - Unwind action for the extra view
     @IBAction func unwindToMain(segue: UIStoryboardSegue) {
+    
     }
     
-    // MARK: - Animate button
     
+    
+    // MARK: - Animate button
     func animateButtonRadius(toValue: CGFloat) {
         let animation = CABasicAnimation(keyPath:"cornerRadius")
         animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
@@ -266,6 +334,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
         toggleButton.layer.add(animation, forKey: "cornerRadius")
         toggleButton.layer.cornerRadius = toValue
     }
+    
+    
     
     // MARK: -ARSessionDelegate
     @available(iOS 11.0, *)
@@ -278,7 +348,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
                 
                 // Timestamp
                 let timestamp = CMTimeMakeWithSeconds(frame.timestamp, 1000000)
-
+                
+                
                 // Start session at first recorded frame
                 if (self.isCapturing && frame.timestamp > self.startTime && self.assetWriter?.status != AVAssetWriterStatus.writing) {
                     self.assetWriter!.startWriting()
@@ -287,6 +358,39 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
                 
                 // If recording is active append bufferImage to video frame
                 while (self.isCapturing && frame.timestamp > self.startTime) {
+                    
+                    
+                    
+                    if (self.firstArFrame) {
+                        self.firstFrameTimestamp = frame.timestamp
+                        self.firstArFrame = false
+                    } else {
+                        
+                        DispatchQueue.main.async {
+                            self.timeLabel.text =  String(format: "Rec Time: %.02f s", frame.timestamp - self.firstFrameTimestamp)
+                        }
+                    }
+                    
+                    
+                    if (UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey)) {
+                        // Append ARKit point cloud to csv
+                        if let featurePointsArray = frame.rawFeaturePoints?.points {
+                            var pstr = NSString(format:"%f,%d,%d",
+                                                frame.timestamp,
+                                                self.POINTCLOUD_ID,
+                                                self.frameCount)
+                            // Append each point to str
+                            for point in featurePointsArray {
+                                pstr = NSString(format:"%@,%f,%f,%f",
+                                                pstr,
+                                                point.x, point.y, point.z)
+                            }
+                            pstr = NSString(format:"%@\n", pstr)
+                            if self.pointcloudStream.write(pstr as String) < 0 {
+                                print("Write ARKit point cloud failure");
+                            }
+                        }
+                    }
                     
                     // Append images to video
                     if (self.videoInput!.isReadyForMoreMediaData) {
@@ -322,6 +426,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
     }
     
     
+    
     func runAccDataAcquisition () {
         
         if (UserDefaults.standard.bool(forKey: SettingsKeys.AccEnableKey)){
@@ -350,29 +455,28 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
     }
     
     
+    
     func runGyroDataAcquisition () {
         
         if (UserDefaults.standard.bool(forKey: SettingsKeys.GyroEnableKey)){
             
-            if motionManager.isAccelerometerAvailable && !motionManager.isAccelerometerActive {
-                motionManager.accelerometerUpdateInterval = self.ACCELEROMETER_DT
-                motionManager.startAccelerometerUpdates(to: OperationQueue.current!, withHandler: {(accelerometerData: CMAccelerometerData!, error: Error!) in
-                    if (error != nil){
-                        print("\(String(describing: error))");
-                    }
+            if motionManager.isGyroAvailable && !motionManager.isGyroActive {
+                motionManager.gyroUpdateInterval = self.GYROSCOPE_DT
+                motionManager.startGyroUpdates(to: OperationQueue.current!, withHandler: {(gyroData: CMGyroData!, error: Error!) in
                     let str = NSString(format:"%f,%d,%f,%f,%f\n",
-                                       accelerometerData.timestamp,
-                                       self.ACCELEROMETER_ID,
-                                       accelerometerData.acceleration.x * self.GRAVITY,
-                                       accelerometerData.acceleration.y * self.GRAVITY,
-                                       accelerometerData.acceleration.z * self.GRAVITY)
-                    if self.outputStream.write(str as String) < 0 { print("Write accelerometer failure"); }
-                    } as CMAccelerometerHandler)
+                                       gyroData.timestamp,
+                                       self.GYROSCOPE_ID,
+                                       gyroData.rotationRate.x,
+                                       gyroData.rotationRate.y,
+                                       gyroData.rotationRate.z)
+                    if self.outputStream.write(str as String) < 0 { print("Write gyroscope failure"); }
+                    } as CMGyroHandler)
             } else {
-                print("No accelerometer available.");
+                print("No gyroscope available.");
             }
         }
     }
+    
     
     
     func runMagnetometerDataAcquisition () {
@@ -424,6 +528,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
     }
     
     
+    
     func runVideoAndARKitRecording () {
         
         if (UserDefaults.standard.bool(forKey: SettingsKeys.VideoARKitEnableKey)){
@@ -464,6 +569,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
     }
     
     
+    
     func runLocation() {
         if (UserDefaults.standard.bool(forKey: SettingsKeys.LocationEnableKey)){
             locationManager.startUpdatingLocation()
@@ -472,8 +578,9 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
     
 }
 
-// MARK: - OutputStream: Write Strings
 
+
+// MARK: - OutputStream: Write Strings
 extension OutputStream {
     
     func write(_ string: String, encoding: String.Encoding = .utf8, allowLossyConversion: Bool = false) -> Int {
@@ -503,8 +610,9 @@ extension OutputStream {
     }
 }
 
-// MARK: - float4x4 extensions
 
+
+// MARK: - float4x4 extensions
 extension float4x4 {
     /**
      Treats matrix as a (right-hand column-major convention) transform matrix

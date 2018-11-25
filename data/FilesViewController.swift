@@ -10,12 +10,16 @@ import UIKit
 
 class FilesViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
     
+    
+    
     /* Outlets */
     @IBOutlet weak var tableView: UITableView!
     
     override func viewDidLoad() {
         super.viewDidLoad()
     }
+    
+    
     
     override func viewWillAppear(_ animated: Bool) {
         
@@ -26,20 +30,25 @@ class FilesViewController: UIViewController, UITableViewDataSource, UITableViewD
         
     }
     
+    
+    
     override func didReceiveMemoryWarning() {
+        
         super.didReceiveMemoryWarning()
-        // Dispose of any resources that can be recreated.
     }
     
+    
+    
     func listFilesFromDocumentsFolder() -> [String]? {
+        
         let fileMngr = FileManager.default;
         
-        // Full path to documents directory
         let docs = fileMngr.urls(for: .documentDirectory, in: .userDomainMask)[0].path
         
-        // List all contents of directory and return as [String] OR nil if failed
         return try? fileMngr.contentsOfDirectory(atPath:docs)
     }
+    
+    
     
     //MARK: - Tableview Delegate & Datasource
     func tableView(_ tableView:UITableView, numberOfRowsInSection section:Int) -> Int {
@@ -47,17 +56,31 @@ class FilesViewController: UIViewController, UITableViewDataSource, UITableViewD
         return (list?.count)!
     }
     
+    
+    
     func numberOfSectionsInTableView(tableView: UITableView) -> Int {
         return 1
     }
     
+    
+    
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        
         let cell:UITableViewCell = tableView.dequeueReusableCell(withIdentifier: "myCell")!
         let list = listFilesFromDocumentsFolder()
         cell.textLabel?.text = list?[indexPath.row]
-        cell.imageView?.image = UIImage(named: "file")
+        if( cell.textLabel?.text?.range(of: "mov") != nil ) {
+            cell.imageView?.image = UIImage(named: "movie")
+        } else if( cell.textLabel?.text?.range(of: "csv") != nil ) {
+            cell.imageView?.image = UIImage(named: "four_leaf")
+        } else if( cell.textLabel?.text?.range(of: "pcl") != nil ) {
+            cell.imageView?.image = UIImage(named: "pointcloud")
+        }
+        
         return cell
     }
+    
+    
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
 
@@ -74,6 +97,8 @@ class FilesViewController: UIViewController, UITableViewDataSource, UITableViewD
         self.present(activityViewController, animated: true, completion: nil)
         
     }
+    
+    
     
     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCellEditingStyle, forRowAt indexPath: IndexPath) {
         
@@ -102,6 +127,36 @@ class FilesViewController: UIViewController, UITableViewDataSource, UITableViewD
         } else if editingStyle == .insert {
             // Not used, but if you were adding a new row, this is where you would do it.
         }
+    }
+    
+    
+    
+    @IBAction func onDelButtonPressed(_ sender: UIButton) {
+        
+        let myalert = UIAlertController(title: "Clear all files", message: "Do you realy want to delete all files?", preferredStyle: UIAlertControllerStyle.alert)
+        
+        myalert.addAction(UIAlertAction(title: "Delete", style: .default) { (action:UIAlertAction!) in
+            
+            let list = self.listFilesFromDocumentsFolder()
+            let fileManager = FileManager.default;
+            let docs = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0].path
+    
+            if let l = list {
+                for item in l {
+                    do {
+                        try fileManager.removeItem(at: URL.init(fileURLWithPath: "\(docs)/\(item)"))
+                    } catch let error as NSError {
+                        print("Error removing file:\n \(error)")
+                    }
+                }
+            }
+            self.tableView.reloadData()
+        })
+        myalert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { (action:UIAlertAction!) in
+            
+        })
+        
+        self.present(myalert, animated: true)
     }
     
 }
