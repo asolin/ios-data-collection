@@ -181,13 +181,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
             }
             
             
-            let fileMngr = FileManager.default;
-            
-            let docs = fileMngr.urls(for: .documentDirectory, in: .userDomainMask)[0].path
-            
-            
-            
-            
             /* Store start time */
 //            startTime = ProcessInfo.processInfo.systemUptime
 //            let str = NSString(format:"%f,%d,%f,%f,0\n",
