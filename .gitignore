@@ -48,7 +48,6 @@ playground.xcworkspace
 Podfile.lock
 Pods/
 data.xcworkspace/
-data.xcodeproj/project.pbxproj
 
 # Carthage
 #
