@@ -307,7 +307,7 @@
                                 <nil key="highlightedColor"/>
                             </label>
                             <imageView userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="universiti_logos" translatesAutoresizingMaskIntoConstraints="NO" id="fIN-w7-q6H">
-                                <rect key="frame" x="67.5" y="502" width="240" height="99"/>
+                                <rect key="frame" x="67.5" y="510" width="240" height="99"/>
                                 <constraints>
                                     <constraint firstAttribute="width" constant="240" id="dT5-ky-Zo1"/>
                                     <constraint firstAttribute="height" constant="99" id="o9J-VF-Gyb"/>
@@ -341,7 +341,7 @@
                             <constraint firstItem="uXy-WB-Brl" firstAttribute="centerX" secondItem="NeC-mF-8eS" secondAttribute="centerX" id="f6S-48-S6O"/>
                             <constraint firstItem="fIN-w7-q6H" firstAttribute="centerX" secondItem="NeC-mF-8eS" secondAttribute="centerX" id="gq0-7r-7u0"/>
                             <constraint firstItem="ncs-1P-NZZ" firstAttribute="trailing" secondItem="NeC-mF-8eS" secondAttribute="trailingMargin" id="grG-tZ-Xgb"/>
-                            <constraint firstItem="pTj-Fj-bkv" firstAttribute="top" secondItem="fIN-w7-q6H" secondAttribute="bottom" constant="16" id="ixc-hb-piC"/>
+                            <constraint firstItem="pTj-Fj-bkv" firstAttribute="top" secondItem="fIN-w7-q6H" secondAttribute="bottom" constant="8" id="ixc-hb-piC"/>
                             <constraint firstItem="ji6-fa-nRn" firstAttribute="top" secondItem="Piu-iL-w7r" secondAttribute="bottom" constant="8" id="mcj-YG-EX5"/>
                             <constraint firstItem="bLk-nE-yS5" firstAttribute="trailing" secondItem="NeC-mF-8eS" secondAttribute="trailingMargin" id="nno-Oy-VdZ"/>
                             <constraint firstItem="bLk-nE-yS5" firstAttribute="leading" secondItem="NeC-mF-8eS" secondAttribute="leadingMargin" id="qbG-IY-1IH"/>

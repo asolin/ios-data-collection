@@ -62,7 +62,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
     /* Variables */
     var isCapturing : Bool = false
     var outputStream : OutputStream!
-    var pointcloudStream : OutputStream!
+    //var pointcloudStream : OutputStream!
     var filename : String = ""
     var filePath : NSURL!
     var frameCount = 0
@@ -160,6 +160,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
             
             /* Create output stream */
             filePath = NSURL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(filename)!.appendingPathExtension("csv") as NSURL
+            print("\(filePath!)")
             outputStream = OutputStream(url: filePath as URL, append: false)
             if outputStream != nil {
                 outputStream.open()
@@ -168,27 +169,15 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
                 return
             }
             
-            if (UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey)) {
-                filePath = NSURL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(filename)!.appendingPathExtension("pcl") as NSURL
-                print("\(filePath!)")
-                pointcloudStream = OutputStream(url: filePath as URL, append: false)
-                if pointcloudStream != nil {
-                    pointcloudStream.open()
-                } else {
-                    print("Unable to open pointcloud file.")
-                    return
-                }
-            }
-            
             
             /* Store start time */
-//            startTime = ProcessInfo.processInfo.systemUptime
-//            let str = NSString(format:"%f,%d,%f,%f,0\n",
-//                startTime,
-//                self.TIMESTAMP_ID,
-//                Date().timeIntervalSince1970,
-//                Clock.now!.timeIntervalSince1970)
-//            if self.outputStream.write(str as String) < 0 { print("Write timestamp failure"); }
+            startTime = ProcessInfo.processInfo.systemUptime
+            let str = NSString(format:"%f,%d,%f,%f,0\n",
+                startTime,
+                self.TIMESTAMP_ID,
+                Date().timeIntervalSince1970,
+                Clock.now!.timeIntervalSince1970)
+            if self.outputStream.write(str as String) < 0 { print("Write timestamp failure"); }
             
             /* Start accelerometer updates */
             /* Setup Data Acquisition */
@@ -259,10 +248,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
             
             /* Close output stream */
             outputStream.close()
-            if (UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey)) {
-                pointcloudStream.close()
-                
-            }
             
             
             /* Move data file */
@@ -288,7 +273,9 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
     
     // MARK: - CLLocationManagerDelegate
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        
         if (isCapturing) {
+            
             // Time offset
             let offset = Date().timeIntervalSinceReferenceDate - ProcessInfo.processInfo.systemUptime
             
@@ -379,7 +366,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
                                                 point.x, point.y, point.z)
                             }
                             pstr = NSString(format:"%@\n", pstr)
-                            if self.pointcloudStream.write(pstr as String) < 0 {
+                            if self.outputStream.write(pstr as String) < 0 {
                                 print("Write ARKit point cloud failure");
                             }
                         }
@@ -426,24 +413,30 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
             
             if motionManager.isAccelerometerAvailable && !motionManager.isAccelerometerActive {
                 
+                
                 motionManager.accelerometerUpdateInterval = self.ACCELEROMETER_DT
                 motionManager.startAccelerometerUpdates(to: OperationQueue.current!, withHandler: {(accelerometerData: CMAccelerometerData!, error: Error!) in
                     if (error != nil){
                         
                         print("\(String(describing: error))");
                     }
-                    
-                    let str = NSString(format:"%f,%d,%f,%f,%f\n",
-                                       accelerometerData.timestamp,
-                                       self.ACCELEROMETER_ID,
-                                       accelerometerData.acceleration.x * self.GRAVITY,
-                                       accelerometerData.acceleration.y * self.GRAVITY,
-                                       accelerometerData.acceleration.z * self.GRAVITY)
-                    if self.outputStream.write(str as String) < 0 { print("Write accelerometer failure"); }
-                    } as CMAccelerometerHandler)
+                    if (self.isCapturing) {
+                        let str = NSString(format:"%f,%d,%f,%f,%f\n",
+                                           accelerometerData.timestamp,
+                                           self.ACCELEROMETER_ID,
+                                           accelerometerData.acceleration.x * self.GRAVITY,
+                                           accelerometerData.acceleration.y * self.GRAVITY,
+                                           accelerometerData.acceleration.z * self.GRAVITY)
+                        if self.outputStream.write(str as String) < 0 {
+                            print("Write accelerometer failure")
+                        }
+                    }
+                } as CMAccelerometerHandler)
+                
             } else {
                 print("No accelerometer available.");
             }
+            
         }
     }
     
@@ -454,16 +447,22 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
         if (UserDefaults.standard.bool(forKey: SettingsKeys.GyroEnableKey)){
             
             if motionManager.isGyroAvailable && !motionManager.isGyroActive {
+                
                 motionManager.gyroUpdateInterval = self.GYROSCOPE_DT
                 motionManager.startGyroUpdates(to: OperationQueue.current!, withHandler: {(gyroData: CMGyroData!, error: Error!) in
-                    let str = NSString(format:"%f,%d,%f,%f,%f\n",
-                                       gyroData.timestamp,
-                                       self.GYROSCOPE_ID,
-                                       gyroData.rotationRate.x,
-                                       gyroData.rotationRate.y,
-                                       gyroData.rotationRate.z)
-                    if self.outputStream.write(str as String) < 0 { print("Write gyroscope failure"); }
-                    } as CMGyroHandler)
+                    if (self.isCapturing) {
+                        let str = NSString(format:"%f,%d,%f,%f,%f\n",
+                                           gyroData.timestamp,
+                                           self.GYROSCOPE_ID,
+                                           gyroData.rotationRate.x,
+                                           gyroData.rotationRate.y,
+                                           gyroData.rotationRate.z)
+                        if self.outputStream.write(str as String) < 0 {
+                            print("Write gyroscope failure")
+                        }
+                    }
+                } as CMGyroHandler)
+                
             } else {
                 print("No gyroscope available.");
             }
@@ -477,19 +476,24 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
         if (UserDefaults.standard.bool(forKey: SettingsKeys.MagnetEnableKey)){
             
             if motionManager.isMagnetometerAvailable && !motionManager.isMagnetometerActive {
+                
                 motionManager.magnetometerUpdateInterval = self.MAGNETOMETER_DT
                 motionManager.startMagnetometerUpdates(to: OperationQueue.current!, withHandler: {(magnetometerData: CMMagnetometerData!, error: Error!) in
                     if (error != nil){
                         print("\(String(describing: error))");
                     }
-                    let str = NSString(format:"%f,%d,%f,%f,%f\n",
-                                       magnetometerData.timestamp,
-                                       self.MAGNETOMETER_ID,
-                                       magnetometerData.magneticField.x,
-                                       magnetometerData.magneticField.y,
-                                       magnetometerData.magneticField.z)
-                    if self.outputStream.write(str as String) < 0 { print("Write magnetometer failure"); }
-                    } as CMMagnetometerHandler)
+                    if (self.isCapturing) {
+                        let str = NSString(format:"%f,%d,%f,%f,%f\n",
+                                           magnetometerData.timestamp,
+                                           self.MAGNETOMETER_ID,
+                                           magnetometerData.magneticField.x,
+                                           magnetometerData.magneticField.y,
+                                           magnetometerData.magneticField.z)
+                        if self.outputStream.write(str as String) < 0 {
+                            print("Write magnetometer failure")
+                        }
+                    }
+                } as CMMagnetometerHandler)
             } else {
                 print("No magnetometer available.");
             }
@@ -503,17 +507,25 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
         if (UserDefaults.standard.bool(forKey: SettingsKeys.BarometerEnableKey)){
             
             if CMAltimeter.isRelativeAltitudeAvailable() {
+                
+                    
                 altimeter.startRelativeAltitudeUpdates(to: OperationQueue.current!, withHandler: {(altitudeData: CMAltitudeData!, error: Error!)in
                     if (error != nil){
                         print("\(String(describing: error))");
                     }
-                    let str = NSString(format:"%f,%d,%f,%f,0\n",
-                                       altitudeData.timestamp,
-                                       self.BAROMETER_ID,
-                                       altitudeData.pressure.doubleValue,
-                                       altitudeData.relativeAltitude.doubleValue)
-                    if self.outputStream.write(str as String) < 0 { print("Write barometer failure"); }
-                    } as CMAltitudeHandler)
+                    
+                    if (self.isCapturing) {
+                        let str = NSString(format:"%f,%d,%f,%f,0\n",
+                                           altitudeData.timestamp,
+                                           self.BAROMETER_ID,
+                                           altitudeData.pressure.doubleValue,
+                                           altitudeData.relativeAltitude.doubleValue)
+                        if self.outputStream.write(str as String) < 0 {
+                            print("Write barometer failure")
+                        }
+                    }
+                } as CMAltitudeHandler)
+                
             } else {
                 print("No barometer available.");
             }

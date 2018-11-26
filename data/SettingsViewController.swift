@@ -10,16 +10,6 @@ import UIKit
 
 class SettingsViewController: UIViewController, UITableViewDataSource, SettingsTableViewProtocol {
     
-    
-
-    @IBOutlet weak var VideoARKitSwitch: UISwitch!
-    @IBOutlet weak var GyroSwitch: UISwitch!
-    @IBOutlet weak var AccSwitch: UISwitch!
-    @IBOutlet weak var MagnetSwitch: UISwitch!
-    @IBOutlet weak var BaroSwitch: UISwitch!
-    @IBOutlet weak var LocationSwitch: UISwitch!
-    @IBOutlet weak var PointcloudSwitch: UISwitch!
-    
     @IBOutlet weak var settingsTable: UITableView!
     
     var cellList : [SettingsTableViewCell] = []
@@ -27,51 +17,13 @@ class SettingsViewController: UIViewController, UITableViewDataSource, SettingsT
     override func viewDidLoad() {
         super.viewDidLoad()
 
-//        setupSwitchWithUserDefaultsValue(button: VideoARKitSwitch, key: SettingsKeys.VideoARKitEnableKey)
-//        setupSwitchWithUserDefaultsValue(button: GyroSwitch, key: SettingsKeys.GyroEnableKey)
-//        setupSwitchWithUserDefaultsValue(button: AccSwitch, key: SettingsKeys.AccEnableKey)
-//        setupSwitchWithUserDefaultsValue(button: MagnetSwitch, key: SettingsKeys.MagnetEnableKey)
-//        setupSwitchWithUserDefaultsValue(button: BaroSwitch, key: SettingsKeys.BarometerEnableKey)
-//        setupSwitchWithUserDefaultsValue(button: LocationSwitch, key: SettingsKeys.LocationEnableKey)
-//        setupSwitchWithUserDefaultsValue(button: PointcloudSwitch, key: SettingsKeys.PointcloudEnableKey)
-//
         // Do any additional setup after loading the view.
         settingsTable.dataSource = self
         settingsTable.separatorStyle = UITableViewCellSeparatorStyle.none
     }
     
 
-    /*
-    // MARK: - Navigation
 
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // Get the new view controller using segue.destination.
-        // Pass the selected object to the new view controller.
-    }
-    */
-//    @IBAction func onSwitchChanged(_ sender: UISwitch) {
-//
-//        let isOn = sender.isOn
-//
-//        if (sender == VideoARKitSwitch) {
-//            UserDefaults.standard.set(isOn, forKey: SettingsKeys.VideoARKitEnableKey)
-//        }else if (sender == GyroSwitch) {
-//            UserDefaults.standard.set(isOn, forKey: SettingsKeys.GyroEnableKey)
-//        }else if (sender == AccSwitch) {
-//            UserDefaults.standard.set(isOn, forKey: SettingsKeys.AccEnableKey)
-//        }else if (sender == MagnetSwitch) {
-//            UserDefaults.standard.set(isOn, forKey: SettingsKeys.MagnetEnableKey)
-//        }else if (sender == BaroSwitch) {
-//            UserDefaults.standard.set(isOn, forKey: SettingsKeys.BarometerEnableKey)
-//        }else if (sender == LocationSwitch) {
-//            UserDefaults.standard.set(isOn, forKey: SettingsKeys.LocationEnableKey)
-//        }else if (sender == PointcloudSwitch) {
-//            UserDefaults.standard.set(isOn, forKey: SettingsKeys.PointcloudEnableKey)
-//        }else {
-//            print("Error: Unexpected switch setting sender!")
-//        }
-//    }
     
     func isKeyInUserDefaults(key: String) -> Bool {
         return UserDefaults.standard.object(forKey: key) != nil
@@ -141,6 +93,26 @@ class SettingsViewController: UIViewController, UITableViewDataSource, SettingsT
     
     func settingsTableViewCell(cell: SettingsTableViewCell, newSwitchValue: Bool, cellTag: String) {
         UserDefaults.standard.set(newSwitchValue, forKey: cellTag)
+        
+        if (cellTag == SettingsKeys.PointcloudEnableKey && newSwitchValue == true) {
+            
+            UserDefaults.standard.set(true, forKey: SettingsKeys.VideoARKitEnableKey)
+            for cell in cellList {
+                if (cell.cellTag == SettingsKeys.VideoARKitEnableKey){
+                    cell.settingsSwitch.setOn(true, animated: true)
+                }
+            }
+        }
+        
+        if (cellTag == SettingsKeys.VideoARKitEnableKey && newSwitchValue == false) {
+            
+            UserDefaults.standard.set(false, forKey: SettingsKeys.PointcloudEnableKey)
+            for cell in cellList {
+                if (cell.cellTag == SettingsKeys.PointcloudEnableKey){
+                    cell.settingsSwitch.setOn(false, animated: true)
+                }
+            }
+        }
     }
     
     

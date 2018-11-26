@@ -45,7 +45,12 @@ class FilesViewController: UIViewController, UITableViewDataSource, UITableViewD
         
         let docs = fileMngr.urls(for: .documentDirectory, in: .userDomainMask)[0].path
         
-        return try? fileMngr.contentsOfDirectory(atPath:docs)
+        let list = try? fileMngr.contentsOfDirectory(atPath:docs)
+        
+        if let l = list {
+            return l.sorted{ $0 < $1 }
+        }
+        return list
     }
     
     
@@ -67,7 +72,8 @@ class FilesViewController: UIViewController, UITableViewDataSource, UITableViewD
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
         let cell:UITableViewCell = tableView.dequeueReusableCell(withIdentifier: "myCell")!
-        let list = listFilesFromDocumentsFolder()
+        var list = listFilesFromDocumentsFolder()
+        
         cell.textLabel?.text = list?[indexPath.row]
         if( cell.textLabel?.text?.range(of: "mov") != nil ) {
             cell.imageView?.image = UIImage(named: "movie")
@@ -86,6 +92,7 @@ class FilesViewController: UIViewController, UITableViewDataSource, UITableViewD
 
         // All files
         let list = listFilesFromDocumentsFolder()
+        
         
         // Path to file
         let documentsPath = try! FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
@@ -106,7 +113,7 @@ class FilesViewController: UIViewController, UITableViewDataSource, UITableViewD
             
             // All files
             let list = listFilesFromDocumentsFolder()
-            
+                
             // Path to file
             let documentsPath = try! FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
             let filePath = NSURL(fileURLWithPath: documentsPath.absoluteString).appendingPathComponent((list?[indexPath.row])!)
