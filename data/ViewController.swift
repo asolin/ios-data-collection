@@ -160,7 +160,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
             
             /* Create output stream */
             filePath = NSURL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(filename)!.appendingPathExtension("csv") as NSURL
-            print("\(filePath!)")
             outputStream = OutputStream(url: filePath as URL, append: false)
             if outputStream != nil {
                 outputStream.open()
@@ -168,6 +167,15 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
                 print("Unable to open file.")
                 return
             }
+            
+//            filePath = NSURL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(filename)!.appendingPathExtension("pcl") as NSURL
+//            pointcloudStream = OutputStream(url: filePath as URL, append: false)
+//            if pointcloudStream != nil {
+//                pointcloudStream.open()
+//            } else {
+//                print("Unable to open pointcloud file.")
+//                return
+//            }
             
             
             /* Store start time */
@@ -248,7 +256,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
             
             /* Close output stream */
             outputStream.close()
-            
+            //pointcloudStream.close()
             
             /* Move data file */
             let destinationPath = NSURL(fileURLWithPath: documentsPath.absoluteString).appendingPathComponent(filename)?.appendingPathExtension("csv")
