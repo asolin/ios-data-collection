@@ -184,7 +184,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
                 startTime,
                 self.TIMESTAMP_ID,
                 Date().timeIntervalSince1970,
-                Clock.now!.timeIntervalSince1970)
+                Clock.now?.timeIntervalSince1970 ?? 0)
             if self.outputStream.write(str as String) < 0 { print("Write timestamp failure"); }
             
             /* Start accelerometer updates */
