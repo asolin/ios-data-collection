@@ -48,10 +48,9 @@ class SettingsViewController: UIViewController, UITableViewDataSource, SettingsT
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
-        let cell = tableView.dequeueReusableCell(withIdentifier: "SettingsCell", for: indexPath) as! SettingsTableViewCell
-        
-        if indexPath.item < SettingsKeys.keys.count {
+        if (indexPath.item < SettingsKeys.keys.count) {
             
+            let cell = tableView.dequeueReusableCell(withIdentifier: "SettingsCell", for: indexPath) as! SettingsTableViewCell
             let key = SettingsKeys.keys[indexPath.item]
             let title = SettingsCellTitles.titles[key]
             
@@ -62,14 +61,18 @@ class SettingsViewController: UIViewController, UITableViewDataSource, SettingsT
         
             setupSwitchWithUserDefaultsValue(button: cell.settingsSwitch, key: key)
             
-        } else {
+            cellList.append(cell)
+            return cell
+        } else if (indexPath.item == SettingsKeys.keys.count) {
             
-            print("Error: unexpected index path for settings table cell! \(indexPath.item)")
+            let cell = tableView.dequeueReusableCell(withIdentifier: "ResolutionCell", for: indexPath) as! ResolutionTableViewCell
+            
+            return cell
+            
+        } else {
+            print(" ERROR: Unexpected settings table index !")
         }
-        
-        cellList.append(cell)
-        
-        return cell
+        return UITableViewCell()
     }
     
     
@@ -85,7 +88,7 @@ class SettingsViewController: UIViewController, UITableViewDataSource, SettingsT
         
         cellList = []
         
-        return SettingsKeys.keys.count
+        return SettingsKeys.keys.count + 1 // +1 is the resolution cell
     }
     
     

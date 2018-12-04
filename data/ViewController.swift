@@ -555,10 +555,17 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
                 return
             }
             
+            var selectedResolution = UserDefaults.standard.integer(forKey: SettingsResolutions.userDefaultResolutionKey)
+            if ( selectedResolution >= SettingsResolutions.resolutionWidths.count || selectedResolution > SettingsResolutions.resolutionHeights.count) {
+                
+                print(" ERROR: unexpected resolution picked index: \(selectedResolution)")
+                selectedResolution = 0
+            }
+            
             let videoOutputSettings: Dictionary<String, AnyObject> = [
                 AVVideoCodecKey : AVVideoCodecType.h264 as AnyObject,
-                AVVideoWidthKey : 1280 as AnyObject,
-                AVVideoHeightKey : 720 as AnyObject
+                AVVideoWidthKey : SettingsResolutions.resolutionWidths[selectedResolution] as AnyObject,
+                AVVideoHeightKey : SettingsResolutions.resolutionHeights[selectedResolution] as AnyObject
             ]
             
             // If grayscale: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange

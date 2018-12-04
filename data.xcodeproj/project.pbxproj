@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5F477C7021B6905100FCF7F2 /* ResolutionTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F477C6F21B6905100FCF7F2 /* ResolutionTableViewCell.swift */; };
 		5F6304E221AAD03D00FB0019 /* SettingsTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F6304E121AAD03D00FB0019 /* SettingsTableViewCell.swift */; };
 		5F6304E421AB031B00FB0019 /* app_icon in Resources */ = {isa = PBXBuildFile; fileRef = 5F6304E321AB031B00FB0019 /* app_icon */; };
 		5F7D8D5221A58AD600C064E5 /* AboutViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F7D8D5121A58AD600C064E5 /* AboutViewController.swift */; };
@@ -37,6 +38,7 @@
 		29A9EC66BA2EF7B28957B73C /* Pods-dataTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-dataTests.release.xcconfig"; path = "Pods/Target Support Files/Pods-dataTests/Pods-dataTests.release.xcconfig"; sourceTree = "<group>"; };
 		401277F150408B42EEA0464B /* Pods_data.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_data.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		58E0ACE1AC51922F4E78FFBD /* Pods_dataTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_dataTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		5F477C6F21B6905100FCF7F2 /* ResolutionTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResolutionTableViewCell.swift; sourceTree = "<group>"; };
 		5F6304E121AAD03D00FB0019 /* SettingsTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTableViewCell.swift; sourceTree = "<group>"; };
 		5F6304E321AB031B00FB0019 /* app_icon */ = {isa = PBXFileReference; lastKnownFileType = folder; path = app_icon; sourceTree = "<group>"; };
 		5F7D8D5121A58AD600C064E5 /* AboutViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutViewController.swift; sourceTree = "<group>"; };
@@ -127,6 +129,7 @@
 				65B28B2A1F79474D0048AFD3 /* FilesViewController.swift */,
 				5FD98B4321A4213300A95682 /* SettingsViewController.swift */,
 				5F6304E121AAD03D00FB0019 /* SettingsTableViewCell.swift */,
+				5F477C6F21B6905100FCF7F2 /* ResolutionTableViewCell.swift */,
 				5FD98B4521A42B1A00A95682 /* SettingsKeys.swift */,
 				5F7D8D5121A58AD600C064E5 /* AboutViewController.swift */,
 				65B28B0E1F7642F80048AFD3 /* Main.storyboard */,
@@ -319,6 +322,7 @@
 				5F6304E221AAD03D00FB0019 /* SettingsTableViewCell.swift in Sources */,
 				65B28B0B1F7642F80048AFD3 /* AppDelegate.swift in Sources */,
 				5FD98B4421A4213300A95682 /* SettingsViewController.swift in Sources */,
+				5F477C7021B6905100FCF7F2 /* ResolutionTableViewCell.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
