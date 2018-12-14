@@ -49,3 +49,15 @@ class SettingsDescriptions {
     ]
     
 }
+
+
+class SettingsResolutions {
+    
+    static let userDefaultResolutionKey = "SelectedResolutionKey"
+    
+    static let resolutionsStrings : [String] = ["800:600", "1280:720", "1280:960", "1440:1080", "1600:1200", "1920:1080", "2048:1536", "3840:2160"]
+    
+    static let resolutionWidths : [Int] = [ 800, 1280, 1280, 1440, 1600, 1920, 2048, 3840 ]
+    
+    static let resolutionHeights : [Int] = [ 600, 720, 960, 1080, 1200, 1080, 1536, 2160 ]
+}

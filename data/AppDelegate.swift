@@ -13,9 +13,25 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
 
+    let firstLaunchKey = "FirstLaunch"
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+        
+        let firstLaunch = UserDefaults.standard.bool(forKey: firstLaunchKey)
+        if firstLaunch  {
+            print("Not first launch.")
+            
+        } else {
+            
+            print("First launch")
+            UserDefaults.standard.set(true, forKey: firstLaunchKey)
+            
+            for key in SettingsKeys.keys {
+                UserDefaults.standard.set(true, forKey: key)
+            }
+        }
+        
         return true
     }
 
