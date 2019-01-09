@@ -9,13 +9,13 @@
 import UIKit
 
 class AboutViewController: UIViewController {
-    @IBOutlet weak var descriptionLabel: UILabel!
-    @IBOutlet weak var authorsLabel: UILabel!
-    @IBOutlet weak var githubButton: UIButton!
+    @IBOutlet weak private var descriptionLabel: UILabel!
+    @IBOutlet weak private var authorsLabel: UILabel!
+    @IBOutlet weak private var githubButton: UIButton!
 
-    static let descriptionText : String = "ADVIO Data app works as a simple to use\nrecording tool for Camera-IMU mapping.\nIt allows you to quickly recordand share\nall iPhone's sensorsthat can be used\nfor localization purpose.\n\nFor more details see GitHub page."
+    static private let descriptionText : String = "ADVIO Data app works as a simple to use\nrecording tool for Camera-IMU mapping.\nIt allows you to quickly recordand share\nall iPhone's sensorsthat can be used\nfor localization purpose.\n\nFor more details see GitHub page."
 
-    static let authorsText : String = "Santiago Cortés *\nArno Solin *\nEsa Rahtu **\nJuho Kannala *\nAdam Ligocki **\n\n *\t-  Aalto University\n **\t-  Tampere University of Technology"
+    static private let authorsText : String = "Santiago Cortés *\nArno Solin *\nEsa Rahtu **\nJuho Kannala *\nAdam Ligocki **\n\n *\t-  Aalto University\n **\t-  Tampere University of Technology"
 
     override func viewDidLoad() {
         super.viewDidLoad()

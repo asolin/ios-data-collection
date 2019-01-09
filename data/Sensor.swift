@@ -11,10 +11,10 @@ let BAROMETER_ID     = 6
 let ARKIT_ID         = 7
 let POINTCLOUD_ID    = 8
 
-let ACCELEROMETER_DT = 0.01
-let GYROSCOPE_DT     = 0.01
-let MAGNETOMETER_DT  = 0.01
-let GRAVITY          = -9.81
+private let ACCELEROMETER_DT = 0.01
+private let GYROSCOPE_DT     = 0.01
+private let MAGNETOMETER_DT  = 0.01
+private let GRAVITY          = -9.81
 
 func runAccDataAcquisition(_ motionManager: CMMotionManager, _ opQueue: OperationQueue, _ outputStream: OutputStream) {
     if motionManager.isAccelerometerAvailable && !motionManager.isAccelerometerActive {

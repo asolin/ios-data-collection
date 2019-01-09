@@ -20,15 +20,15 @@ class SettingsTableViewCell: UITableViewCell, SettingsTableViewProtocol {
     var cellTag : String = ""
     var delegate : SettingsTableViewProtocol?
 
-    func setTitle(title: String) {
+    private func setTitle(title: String) {
         titleLabel.text = title
     }
 
-    func setSettingsSwitch(isOn: Bool){
+    private func setSettingsSwitch(isOn: Bool){
         settingsSwitch.setOn(isOn, animated: false)
     }
 
-    func getSettingsSwitch() -> Bool {
+    private func getSettingsSwitch() -> Bool {
         return settingsSwitch.isOn
     }
 
@@ -42,7 +42,7 @@ class SettingsTableViewCell: UITableViewCell, SettingsTableViewProtocol {
         // Configure the view for the selected state
     }
 
-    @IBAction func onSwitchValueChanged(_ sender: UISwitch) {
+    @IBAction private func onSwitchValueChanged(_ sender: UISwitch) {
         if delegate != nil {
             delegate!.settingsTableViewCell(cell: self, newSwitchValue: sender.isOn, cellTag: cellTag)
         }

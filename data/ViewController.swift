@@ -12,9 +12,9 @@ import UIKit
 @available(iOS 11.0, *)
 class ViewController: UIViewController {
     /* Outlets */
-    @IBOutlet weak var toggleButton: UIButton!
-    @IBOutlet weak var arView: ARSCNView!
-    @IBOutlet weak var timeLabel: UILabel!
+    @IBOutlet weak private var toggleButton: UIButton!
+    @IBOutlet weak private var arView: ARSCNView!
+    @IBOutlet weak private var timeLabel: UILabel!
 
     var captureControllerDelegate: CaptureControllerDelegate!
 
@@ -61,7 +61,7 @@ class ViewController: UIViewController {
         // Dispose of any resources that can be recreated.
     }
 
-    @objc func toggleCapture(_ sender: UITapGestureRecognizer) {
+    @objc private func toggleCapture(_ sender: UITapGestureRecognizer) {
         if (!captureControllerDelegate.capturing()) {
             captureControllerDelegate.startCapture();
             self.toggleButton.setTitle("Stop", for: .normal);

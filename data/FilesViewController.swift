@@ -10,7 +10,7 @@ import UIKit
 
 class FilesViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
     /* Outlets */
-    @IBOutlet weak var tableView: UITableView!
+    @IBOutlet weak private var tableView: UITableView!
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -27,7 +27,7 @@ class FilesViewController: UIViewController, UITableViewDataSource, UITableViewD
         super.didReceiveMemoryWarning()
     }
 
-    func listFilesFromDocumentsFolder() -> [String]? {
+    private func listFilesFromDocumentsFolder() -> [String]? {
         let fileMngr = FileManager.default;
         let docs = fileMngr.urls(for: .documentDirectory, in: .userDomainMask)[0].path
         let list = try? fileMngr.contentsOfDirectory(atPath:docs)
@@ -43,7 +43,7 @@ class FilesViewController: UIViewController, UITableViewDataSource, UITableViewD
         return (list?.count)!
     }
 
-    func numberOfSectionsInTableView(tableView: UITableView) -> Int {
+    private func numberOfSectionsInTableView(tableView: UITableView) -> Int {
         return 1
     }
 

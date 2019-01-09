@@ -15,30 +15,30 @@ protocol CaptureControllerDelegate: class {
 }
 
 class CaptureController: NSObject {
-    var arSession: ARSession!
+    private var arSession: ARSession!
 
     /* Managers for the sensor data */
-    let motionManager = CMMotionManager()
-    let altimeter = CMAltimeter()
-    var locationManager = CLLocationManager()
+    private let motionManager = CMMotionManager()
+    private let altimeter = CMAltimeter()
+    private var locationManager = CLLocationManager()
 
-    let captureSessionQueue: DispatchQueue = DispatchQueue(label: "captureSession", attributes: [])
-    var opQueue: OperationQueue!
+    private let captureSessionQueue: DispatchQueue = DispatchQueue(label: "captureSession", attributes: [])
+    private var opQueue: OperationQueue!
 
     /* Manager for camera data */
-    var assetWriter : AVAssetWriter?
-    var pixelBufferAdaptor : AVAssetWriterInputPixelBufferAdaptor?
-    var videoInput : AVAssetWriterInput?
+    private var assetWriter : AVAssetWriter?
+    private var pixelBufferAdaptor : AVAssetWriterInputPixelBufferAdaptor?
+    private var videoInput : AVAssetWriterInput?
 
-    var isCapturing : Bool = false
-    var outputStream : OutputStream!
-    //var pointcloudStream : OutputStream!
-    var filename : String = ""
-    var filePath : NSURL!
-    var frameCount = 0
-    var startTime : TimeInterval = 0
-    var firstArFrame : Bool = true
-    var firstFrameTimestamp : TimeInterval = 0.0
+    private var isCapturing : Bool = false
+    private var outputStream : OutputStream!
+    //private var pointcloudStream : OutputStream!
+    private var filename : String = ""
+    private var filePath : NSURL!
+    private var frameCount = 0
+    private var startTime : TimeInterval = 0
+    private var firstArFrame : Bool = true
+    private var firstFrameTimestamp : TimeInterval = 0.0
 
     func start() {
         opQueue = OperationQueue()
@@ -52,7 +52,7 @@ class CaptureController: NSObject {
         Clock.sync()
     }
 
-    func runVideoAndARKitRecording() {
+    private func runVideoAndARKitRecording() {
         if !UserDefaults.standard.bool(forKey: SettingsKeys.VideoARKitEnableKey) {
             return
         }
@@ -91,7 +91,7 @@ class CaptureController: NSObject {
         arSession.run(configuration, options: [.resetTracking, .removeExistingAnchors])
     }
 
-    func runLocation() {
+    private func runLocation() {
         if (UserDefaults.standard.bool(forKey: SettingsKeys.LocationEnableKey)){
             locationManager.startUpdatingLocation()
         }

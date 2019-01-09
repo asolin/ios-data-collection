@@ -9,9 +9,9 @@
 import UIKit
 
 class SettingsViewController: UIViewController, UITableViewDataSource, SettingsTableViewProtocol {
-    @IBOutlet weak var settingsTable: UITableView!
+    @IBOutlet weak private var settingsTable: UITableView!
 
-    var cellList : [SettingsTableViewCell] = []
+    private var cellList : [SettingsTableViewCell] = []
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -21,11 +21,11 @@ class SettingsViewController: UIViewController, UITableViewDataSource, SettingsT
         settingsTable.separatorStyle = UITableViewCell.SeparatorStyle.none
     }
 
-    func isKeyInUserDefaults(key: String) -> Bool {
+    private func isKeyInUserDefaults(key: String) -> Bool {
         return UserDefaults.standard.object(forKey: key) != nil
     }
 
-    func setupSwitchWithUserDefaultsValue(button: UISwitch, key: String) {
+    private func setupSwitchWithUserDefaultsValue(button: UISwitch, key: String) {
         if isKeyInUserDefaults(key: key) {
             let isEnabled = UserDefaults.standard.bool(forKey: key)
             button.setOn(isEnabled, animated: false)
@@ -62,7 +62,7 @@ class SettingsViewController: UIViewController, UITableViewDataSource, SettingsT
         return cell
     }
 
-    func numberOfSections(in tableView: UITableView) -> Int {
+    private func numberOfSections(in tableView: UITableView) -> Int {
         return 1
     }
 
