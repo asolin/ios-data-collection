@@ -112,7 +112,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
         // Dispose of any resources that can be recreated.
     }
 
-    func toggleCapture(_ sender: UITapGestureRecognizer) {
+    @objc func toggleCapture(_ sender: UITapGestureRecognizer) {
         if (!isCapturing) {
             // Sync clock
             Clock.sync()
@@ -269,7 +269,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
     // MARK: - Animate button
     func animateButtonRadius(toValue: CGFloat) {
         let animation = CABasicAnimation(keyPath:"cornerRadius")
-        animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+        animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
         animation.fromValue = toggleButton.layer.cornerRadius
         animation.toValue = toValue
         animation.duration = 0.5
@@ -284,10 +284,10 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
             // Execute in its own thread
             captureSessionQueue.async {
                 // Timestamp
-                let timestamp = CMTimeMakeWithSeconds(frame.timestamp, 1000000)
+                let timestamp = CMTimeMakeWithSeconds(frame.timestamp, preferredTimescale: 1000000)
 
                 // Start session at first recorded frame
-                if (self.isCapturing && frame.timestamp > self.startTime && self.assetWriter?.status != AVAssetWriterStatus.writing) {
+                if (self.isCapturing && frame.timestamp > self.startTime && self.assetWriter?.status != AVAssetWriter.Status.writing) {
                     self.assetWriter!.startWriting()
                     self.assetWriter!.startSession(atSourceTime: timestamp)
                 }
@@ -467,7 +467,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
             let videoPath = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(filename).appendingPathExtension("mov")
 
             do {
-                assetWriter = try AVAssetWriter(outputURL: videoPath, fileType: AVFileTypeQuickTimeMovie )
+                assetWriter = try AVAssetWriter(outputURL: videoPath, fileType: AVFileType.mov )
             } catch {
                 print("Error converting images to video: asset initialization error")
                 return
@@ -485,7 +485,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
                 kCVPixelBufferPixelFormatTypeKey as String : Int(kCVPixelFormatType_32BGRA) as AnyObject,
                 ]
 
-            videoInput = AVAssetWriterInput(mediaType: AVMediaTypeVideo, outputSettings: videoOutputSettings)
+            videoInput = AVAssetWriterInput(mediaType: AVMediaType.video, outputSettings: videoOutputSettings)
             videoInput?.expectsMediaDataInRealTime = true
             videoInput?.transform = CGAffineTransform.init(rotationAngle: CGFloat(Double.pi/2))
             pixelBufferAdaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: videoInput!, sourcePixelBufferAttributes: sourceBufferAttributes)

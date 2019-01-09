@@ -78,7 +78,7 @@ class FilesViewController: UIViewController, UITableViewDataSource, UITableViewD
         self.present(activityViewController, animated: true, completion: nil)
     }
 
-    func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCellEditingStyle, forRowAt indexPath: IndexPath) {
+    func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
         if editingStyle == .delete {
             // All files
             let list = listFilesFromDocumentsFolder()
@@ -106,7 +106,7 @@ class FilesViewController: UIViewController, UITableViewDataSource, UITableViewD
     }
 
     @IBAction func onDelButtonPressed(_ sender: UIButton) {
-        let myalert = UIAlertController(title: "Clear all files", message: "Do you realy want to delete all files?", preferredStyle: UIAlertControllerStyle.alert)
+        let myalert = UIAlertController(title: "Clear all files", message: "Do you realy want to delete all files?", preferredStyle: UIAlertController.Style.alert)
 
         myalert.addAction(UIAlertAction(title: "Delete", style: .default) { (action:UIAlertAction!) in
             let list = self.listFilesFromDocumentsFolder()

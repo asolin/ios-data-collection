@@ -18,7 +18,7 @@ class SettingsViewController: UIViewController, UITableViewDataSource, SettingsT
 
         // Do any additional setup after loading the view.
         settingsTable.dataSource = self
-        settingsTable.separatorStyle = UITableViewCellSeparatorStyle.none
+        settingsTable.separatorStyle = UITableViewCell.SeparatorStyle.none
     }
 
     func isKeyInUserDefaults(key: String) -> Bool {
