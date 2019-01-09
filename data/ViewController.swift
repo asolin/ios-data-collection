@@ -17,21 +17,6 @@ import Kronos
 
 @available(iOS 11.0, *)
 class ViewController: UIViewController {
-    /* Constants */
-    let TIMESTAMP_ID     = 0
-    let CAMERA_ID        = 1
-    let LOCATION_ID      = 2
-    let ACCELEROMETER_ID = 3
-    let GYROSCOPE_ID     = 4
-    let MAGNETOMETER_ID  = 5
-    let BAROMETER_ID     = 6
-    let ARKIT_ID         = 7
-    let POINTCLOUD_ID    = 8
-    let GRAVITY          = -9.81
-    let ACCELEROMETER_DT = 0.01
-    let GYROSCOPE_DT     = 0.01
-    let MAGNETOMETER_DT  = 0.01
-
     /* Outlets */
     @IBOutlet weak var toggleButton: UIButton!
     @IBOutlet weak var arView: ARSCNView!
@@ -169,17 +154,24 @@ class ViewController: UIViewController {
         startTime = ProcessInfo.processInfo.systemUptime
         let str = NSString(format:"%f,%d,%f,%f,0\n",
             startTime,
-            self.TIMESTAMP_ID,
+            TIMESTAMP_ID,
             Date().timeIntervalSince1970,
             Clock.now?.timeIntervalSince1970 ?? 0)
         if self.outputStream.write(str as String) < 0 { print("Write timestamp failure"); }
 
-        /* Start accelerometer updates */
-        /* Setup Data Acquisition */
-        runAccDataAcquisition()
-        runGyroDataAcquisition()
-        runMagnetometerDataAcquisition()
-        runBarometerDataAcquisition()
+        // Setup data acquisition.
+        if UserDefaults.standard.bool(forKey: SettingsKeys.AccEnableKey) {
+            runAccDataAcquisition(motionManager, opQueue, outputStream)
+        }
+        if UserDefaults.standard.bool(forKey: SettingsKeys.GyroEnableKey) {
+            runGyroDataAcquisition(motionManager, opQueue, outputStream)
+        }
+        if UserDefaults.standard.bool(forKey: SettingsKeys.MagnetEnableKey) {
+            runMagnetometerDataAcquisition(motionManager, opQueue, outputStream)
+        }
+        if UserDefaults.standard.bool(forKey: SettingsKeys.BarometerEnableKey) {
+            runBarometerDataAcquisition(altimeter, opQueue, outputStream)
+        }
         runLocation();
         // Start ARKit and Video
         runVideoAndARKitRecording()
@@ -278,116 +270,6 @@ class ViewController: UIViewController {
         toggleButton.layer.cornerRadius = toValue
     }
 
-    func runAccDataAcquisition () {
-        if !UserDefaults.standard.bool(forKey: SettingsKeys.AccEnableKey) {
-            return
-        }
-        if motionManager.isAccelerometerAvailable && !motionManager.isAccelerometerActive {
-            motionManager.accelerometerUpdateInterval = self.ACCELEROMETER_DT
-            motionManager.startAccelerometerUpdates(to: opQueue, withHandler: {(accelerometerData: CMAccelerometerData!, error: Error!) in
-                if (error != nil){
-                    print("\(String(describing: error))");
-                }
-                if (self.isCapturing) {
-                    let str = NSString(format:"%f,%d,%f,%f,%f\n",
-                                       accelerometerData.timestamp,
-                                       self.ACCELEROMETER_ID,
-                                       accelerometerData.acceleration.x * self.GRAVITY,
-                                       accelerometerData.acceleration.y * self.GRAVITY,
-                                       accelerometerData.acceleration.z * self.GRAVITY)
-                    if self.outputStream.write(str as String) < 0 {
-                        print("Write accelerometer failure")
-                    }
-                }
-            } as CMAccelerometerHandler)
-
-        }
-        else {
-            print("No accelerometer available.");
-        }
-    }
-
-    func runGyroDataAcquisition () {
-        if !UserDefaults.standard.bool(forKey: SettingsKeys.GyroEnableKey) {
-            return
-        }
-        if motionManager.isGyroAvailable && !motionManager.isGyroActive {
-            motionManager.gyroUpdateInterval = self.GYROSCOPE_DT
-            motionManager.startGyroUpdates(to: opQueue, withHandler: {(gyroData: CMGyroData!, error: Error!) in
-                if (self.isCapturing) {
-                    let str = NSString(format:"%f,%d,%f,%f,%f\n",
-                                       gyroData.timestamp,
-                                       self.GYROSCOPE_ID,
-                                       gyroData.rotationRate.x,
-                                       gyroData.rotationRate.y,
-                                       gyroData.rotationRate.z)
-                    if self.outputStream.write(str as String) < 0 {
-                        print("Write gyroscope failure")
-                    }
-                }
-            } as CMGyroHandler)
-        }
-        else {
-            print("No gyroscope available.");
-        }
-    }
-
-    func runMagnetometerDataAcquisition () {
-        if !UserDefaults.standard.bool(forKey: SettingsKeys.MagnetEnableKey) {
-            return
-        }
-        if motionManager.isMagnetometerAvailable && !motionManager.isMagnetometerActive {
-            motionManager.magnetometerUpdateInterval = self.MAGNETOMETER_DT
-            motionManager.startMagnetometerUpdates(to: opQueue, withHandler: {(magnetometerData: CMMagnetometerData!, error: Error!) in
-                if (error != nil){
-                    print("\(String(describing: error))");
-                }
-                if (self.isCapturing) {
-                    let str = NSString(format:"%f,%d,%f,%f,%f\n",
-                                       magnetometerData.timestamp,
-                                       self.MAGNETOMETER_ID,
-                                       magnetometerData.magneticField.x,
-                                       magnetometerData.magneticField.y,
-                                       magnetometerData.magneticField.z)
-                    if self.outputStream.write(str as String) < 0 {
-                        print("Write magnetometer failure")
-                    }
-                }
-            } as CMMagnetometerHandler)
-        }
-        else {
-            print("No magnetometer available.");
-        }
-    }
-
-    func runBarometerDataAcquisition () {
-        if !UserDefaults.standard.bool(forKey: SettingsKeys.BarometerEnableKey) {
-            return
-        }
-        if CMAltimeter.isRelativeAltitudeAvailable() {
-            altimeter.startRelativeAltitudeUpdates(to: opQueue, withHandler: {(altitudeData: CMAltitudeData!, error: Error!)in
-                if (error != nil){
-                    print("\(String(describing: error))");
-                }
-
-                if (self.isCapturing) {
-                    let str = NSString(format:"%f,%d,%f,%f,0\n",
-                                       altitudeData.timestamp,
-                                       self.BAROMETER_ID,
-                                       altitudeData.pressure.doubleValue,
-                                       altitudeData.relativeAltitude.doubleValue)
-                    if self.outputStream.write(str as String) < 0 {
-                        print("Write barometer failure")
-                    }
-                }
-            } as CMAltitudeHandler)
-
-        }
-        else {
-            print("No barometer available.");
-        }
-    }
-
     func runVideoAndARKitRecording () {
         if !UserDefaults.standard.bool(forKey: SettingsKeys.VideoARKitEnableKey) {
             return
@@ -467,7 +349,7 @@ extension ViewController: ARSessionDelegate {
                 if let featurePointsArray = frame.rawFeaturePoints?.points {
                     var pstr = NSString(format:"%f,%d,%d",
                                         frame.timestamp,
-                                        self.POINTCLOUD_ID,
+                                        POINTCLOUD_ID,
                                         self.frameCount)
                     // Append each point to str
                     for point in featurePointsArray {
@@ -495,7 +377,7 @@ extension ViewController: ARSessionDelegate {
                 // Append ARKit to csv
                 let str = NSString(format:"%f,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
                     frame.timestamp,
-                    self.ARKIT_ID,
+                    ARKIT_ID,
                     self.frameCount,
                     translation[0], translation[1], translation[2],
                     eulerAngles[0], eulerAngles[1], eulerAngles[2],
@@ -528,7 +410,7 @@ extension ViewController: CLLocationManagerDelegate {
         for loc in locations {
             let str = NSString(format:"%f,%d,%.8f,%.8f,%f,%f,%f,%f\n",
                 loc.timestamp.timeIntervalSinceReferenceDate-offset,
-                self.LOCATION_ID,
+                LOCATION_ID,
                 loc.coordinate.latitude,
                 loc.coordinate.longitude,
                 loc.horizontalAccuracy,
