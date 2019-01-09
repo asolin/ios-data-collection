@@ -206,27 +206,33 @@ class ViewController: UIViewController {
         //animateButtonRadius(toValue: toggleButton.frame.height/2.0)
         UIApplication.shared.isIdleTimerDisabled = false
 
-        /* Stop asset writer */
-        if (UserDefaults.standard.bool(forKey: SettingsKeys.VideoARKitEnableKey)){
-            assetWriter!.finishWriting{
-                print("Asset writer stopped.")
+        // Stop video capture.
+        // Use the captureSession queue in case writing and stopping the writer could interfere.
+        captureSessionQueue.async {
+            if let assetWriter = self.assetWriter {
+                if assetWriter.status != AVAssetWriter.Status.writing {
+                    return
+                }
+                assetWriter.finishWriting(completionHandler: {
+                    print("Asset writer stopped.")
+
+                    // Move video file after assetWriter is finished.
+                    let documentsPath = try! FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+                    let fileManager = FileManager.default
+                    if UserDefaults.standard.bool(forKey: SettingsKeys.VideoARKitEnableKey) {
+                        let destinationVideoPath = NSURL(fileURLWithPath: documentsPath.absoluteString).appendingPathComponent(self.filename)?.appendingPathExtension("mov")
+
+                        do {
+                            try fileManager.moveItem(at: assetWriter.outputURL, to: destinationVideoPath!)
+                        } catch let error as NSError {
+                            print("Error occurred while moving video file:\n \(error)")
+                        }
+                    }
+                })
             }
         }
 
-        /* Move video file */
-        let documentsPath = try! FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-        let fileManager = FileManager.default
-        if (UserDefaults.standard.bool(forKey: SettingsKeys.VideoARKitEnableKey)) {
-            let destinationVideoPath = NSURL(fileURLWithPath: documentsPath.absoluteString).appendingPathComponent(filename)?.appendingPathExtension("mov")
-
-            do {
-                try fileManager.moveItem(at: assetWriter!.outputURL, to: destinationVideoPath!)
-            } catch let error as NSError {
-                print("Error occurred while moving video file:\n \(error)")
-            }
-        }
-
-        /* Stop capture */
+        // Stop sensor capture.
         if (motionManager.isAccelerometerActive) {motionManager.stopAccelerometerUpdates(); }
         if (motionManager.isGyroActive) { motionManager.stopGyroUpdates(); }
         if (motionManager.isMagnetometerActive) { motionManager.stopMagnetometerUpdates(); }
@@ -238,6 +244,8 @@ class ViewController: UIViewController {
         //pointcloudStream.close()
 
         /* Move data file */
+        let documentsPath = try! FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+        let fileManager = FileManager.default
         let destinationPath = NSURL(fileURLWithPath: documentsPath.absoluteString).appendingPathComponent(filename)?.appendingPathExtension("csv")
         do {
             try fileManager.moveItem(at: filePath as URL, to: destinationPath!)
