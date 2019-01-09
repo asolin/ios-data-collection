@@ -8,19 +8,34 @@
 
 import UIKit
 
+private let descriptionText: String = """
+    ADVIO Data app is a simple to use recording tool for Camera-IMU mapping. It allows you to quickly record and share all iPhone's sensors that can be used for localization purposes.
+
+    For more details see the GitHub page.
+    """
+
+// Sorted alphabetically by last name.
+private let authorsText: String = """
+    Santiago Cortés *
+    Juho Kannala *
+    Adam Ligocki **
+    Esa Rahtu **
+    Pekka Rantalankila *
+    Arno Solin *
+
+    *\t-  Aalto University
+    **\t-  Tampere University of Technology
+    """
+
 class AboutViewController: UIViewController {
     @IBOutlet weak private var descriptionLabel: UILabel!
     @IBOutlet weak private var authorsLabel: UILabel!
     @IBOutlet weak private var githubButton: UIButton!
 
-    static private let descriptionText : String = "ADVIO Data app works as a simple to use\nrecording tool for Camera-IMU mapping.\nIt allows you to quickly recordand share\nall iPhone's sensorsthat can be used\nfor localization purpose.\n\nFor more details see GitHub page."
-
-    static private let authorsText : String = "Santiago Cortés *\nArno Solin *\nEsa Rahtu **\nJuho Kannala *\nAdam Ligocki **\n\n *\t-  Aalto University\n **\t-  Tampere University of Technology"
-
     override func viewDidLoad() {
         super.viewDidLoad()
-        descriptionLabel.text = AboutViewController.descriptionText
-        authorsLabel.text = AboutViewController.authorsText
+        descriptionLabel.text = descriptionText
+        authorsLabel.text = authorsText
     }
 
     @IBAction func onButtonPressed(_ sender: UIButton) {
