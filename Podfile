@@ -7,9 +7,4 @@ target 'data' do
   # Pods for data
   pod 'Kronos'
 
-  target 'dataTests' do
-    inherit! :search_paths
-    # Pods for testing
-  end
-
 end
