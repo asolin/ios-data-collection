@@ -16,7 +16,7 @@ import ARKit
 import Kronos
 
 @available(iOS 11.0, *)
-class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDelegate, ARSCNViewDelegate {
+class ViewController: UIViewController {
     /* Constants */
     let TIMESTAMP_ID     = 0
     let CAMERA_ID        = 1
@@ -249,29 +249,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
         }
     }
 
-    // MARK: - CLLocationManagerDelegate
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        if (!isCapturing) {
-            return
-        }
-        // Time offset
-        let offset = Date().timeIntervalSinceReferenceDate - ProcessInfo.processInfo.systemUptime
-
-        // For each location
-        for loc in locations {
-            let str = NSString(format:"%f,%d,%.8f,%.8f,%f,%f,%f,%f\n",
-                loc.timestamp.timeIntervalSinceReferenceDate-offset,
-                self.LOCATION_ID,
-                loc.coordinate.latitude,
-                loc.coordinate.longitude,
-                loc.horizontalAccuracy,
-                loc.altitude,
-                loc.verticalAccuracy,
-                loc.speed)
-                if self.outputStream.write(str as String) < 0 { print("Write location failure"); }
-        }
-    }
-
     // MARK: - Unwind action for the extra view
     @IBAction func unwindToMain(segue: UIStoryboardSegue) {
     }
@@ -285,86 +262,6 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
         animation.duration = 0.5
         toggleButton.layer.add(animation, forKey: "cornerRadius")
         toggleButton.layer.cornerRadius = toValue
-    }
-
-    // MARK: -ARSessionDelegate
-    @available(iOS 11.0, *)
-    func session(_ session: ARSession, didUpdate frame: ARFrame) {
-        if !UserDefaults.standard.bool(forKey: SettingsKeys.VideoARKitEnableKey) {
-            return
-        }
-        // Execute in its own thread
-        captureSessionQueue.async {
-            // Timestamp
-            let timestamp = CMTimeMakeWithSeconds(frame.timestamp, preferredTimescale: 1000000)
-
-            // Start session at first recorded frame
-            if (self.isCapturing && frame.timestamp > self.startTime && self.assetWriter?.status != AVAssetWriter.Status.writing) {
-                self.assetWriter!.startWriting()
-                self.assetWriter!.startSession(atSourceTime: timestamp)
-            }
-
-            // If recording is active append bufferImage to video frame
-            while (self.isCapturing && frame.timestamp > self.startTime) {
-                if (self.firstArFrame) {
-                    self.firstFrameTimestamp = frame.timestamp
-                    self.firstArFrame = false
-                }
-                else {
-                    DispatchQueue.main.async {
-                        self.timeLabel.text =  String(format: "Rec Time: %.02f s", frame.timestamp - self.firstFrameTimestamp)
-                    }
-                }
-
-                if (UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey)) {
-                    // Append ARKit point cloud to csv
-                    if let featurePointsArray = frame.rawFeaturePoints?.points {
-                        var pstr = NSString(format:"%f,%d,%d",
-                                            frame.timestamp,
-                                            self.POINTCLOUD_ID,
-                                            self.frameCount)
-                        // Append each point to str
-                        for point in featurePointsArray {
-                            pstr = NSString(format:"%@,%f,%f,%f",
-                                            pstr,
-                                            point.x, point.y, point.z)
-                        }
-                        pstr = NSString(format:"%@\n", pstr)
-                        if self.outputStream.write(pstr as String) < 0 {
-                            print("Write ARKit point cloud failure");
-                        }
-                    }
-                }
-
-                // Append images to video
-                if (self.videoInput!.isReadyForMoreMediaData) {
-                    // Append image to video
-                    self.pixelBufferAdaptor?.append(frame.capturedImage, withPresentationTime: timestamp)
-
-                    let translation = frame.camera.transform.translation
-                    let eulerAngles = frame.camera.eulerAngles
-                    let intrinsics = frame.camera.intrinsics
-                    let transform = frame.camera.transform
-
-                    // Append ARKit to csv
-                    let str = NSString(format:"%f,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
-                        frame.timestamp,
-                        self.ARKIT_ID,
-                        self.frameCount,
-                        translation[0], translation[1], translation[2],
-                        eulerAngles[0], eulerAngles[1], eulerAngles[2],
-                        intrinsics[0][0], intrinsics[1][1], intrinsics[2][0], intrinsics[2][1],
-                        transform[0][0],transform[1][0],transform[2][0],
-                        transform[0][1],transform[1][1],transform[2][1],
-                        transform[0][2],transform[1][2],transform[2][2])
-                    if self.outputStream.write(str as String) < 0 { print("Write ARKit failure"); }
-
-                    self.frameCount = self.frameCount + 1
-
-                    break
-                }
-            }
-        }
     }
 
     func runAccDataAcquisition () {
@@ -519,6 +416,114 @@ class ViewController: UIViewController, CLLocationManagerDelegate, ARSessionDele
     func runLocation() {
         if (UserDefaults.standard.bool(forKey: SettingsKeys.LocationEnableKey)){
             locationManager.startUpdatingLocation()
+        }
+    }
+}
+
+extension ViewController: ARSessionDelegate {
+    @available(iOS 11.0, *)
+    func session(_ session: ARSession, didUpdate frame: ARFrame) {
+        if !UserDefaults.standard.bool(forKey: SettingsKeys.VideoARKitEnableKey) {
+            return
+        }
+        // Execute in its own thread
+        captureSessionQueue.async {
+            // Timestamp
+            let timestamp = CMTimeMakeWithSeconds(frame.timestamp, preferredTimescale: 1000000)
+
+            // Start session at first recorded frame
+            if (self.isCapturing && frame.timestamp > self.startTime && self.assetWriter?.status != AVAssetWriter.Status.writing) {
+                self.assetWriter!.startWriting()
+                self.assetWriter!.startSession(atSourceTime: timestamp)
+            }
+
+            // If recording is active append bufferImage to video frame
+            while (self.isCapturing && frame.timestamp > self.startTime) {
+                if (self.firstArFrame) {
+                    self.firstFrameTimestamp = frame.timestamp
+                    self.firstArFrame = false
+                }
+                else {
+                    DispatchQueue.main.async {
+                        self.timeLabel.text =  String(format: "Rec Time: %.02f s", frame.timestamp - self.firstFrameTimestamp)
+                    }
+                }
+
+                if (UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey)) {
+                    // Append ARKit point cloud to csv
+                    if let featurePointsArray = frame.rawFeaturePoints?.points {
+                        var pstr = NSString(format:"%f,%d,%d",
+                                            frame.timestamp,
+                                            self.POINTCLOUD_ID,
+                                            self.frameCount)
+                        // Append each point to str
+                        for point in featurePointsArray {
+                            pstr = NSString(format:"%@,%f,%f,%f",
+                                            pstr,
+                                            point.x, point.y, point.z)
+                        }
+                        pstr = NSString(format:"%@\n", pstr)
+                        if self.outputStream.write(pstr as String) < 0 {
+                            print("Write ARKit point cloud failure");
+                        }
+                    }
+                }
+
+                // Append images to video
+                if (self.videoInput!.isReadyForMoreMediaData) {
+                    // Append image to video
+                    self.pixelBufferAdaptor?.append(frame.capturedImage, withPresentationTime: timestamp)
+
+                    let translation = frame.camera.transform.translation
+                    let eulerAngles = frame.camera.eulerAngles
+                    let intrinsics = frame.camera.intrinsics
+                    let transform = frame.camera.transform
+
+                    // Append ARKit to csv
+                    let str = NSString(format:"%f,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
+                        frame.timestamp,
+                        self.ARKIT_ID,
+                        self.frameCount,
+                        translation[0], translation[1], translation[2],
+                        eulerAngles[0], eulerAngles[1], eulerAngles[2],
+                        intrinsics[0][0], intrinsics[1][1], intrinsics[2][0], intrinsics[2][1],
+                        transform[0][0],transform[1][0],transform[2][0],
+                        transform[0][1],transform[1][1],transform[2][1],
+                        transform[0][2],transform[1][2],transform[2][2])
+                    if self.outputStream.write(str as String) < 0 { print("Write ARKit failure"); }
+
+                    self.frameCount = self.frameCount + 1
+
+                    break
+                }
+            }
+        }
+    }
+}
+
+extension ViewController: ARSCNViewDelegate {
+}
+
+extension ViewController: CLLocationManagerDelegate {
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        if (!isCapturing) {
+            return
+        }
+        // Time offset
+        let offset = Date().timeIntervalSinceReferenceDate - ProcessInfo.processInfo.systemUptime
+
+        // For each location
+        for loc in locations {
+            let str = NSString(format:"%f,%d,%.8f,%.8f,%f,%f,%f,%f\n",
+                loc.timestamp.timeIntervalSinceReferenceDate-offset,
+                self.LOCATION_ID,
+                loc.coordinate.latitude,
+                loc.coordinate.longitude,
+                loc.horizontalAccuracy,
+                loc.altitude,
+                loc.verticalAccuracy,
+                loc.speed)
+                if self.outputStream.write(str as String) < 0 { print("Write location failure"); }
         }
     }
 }
