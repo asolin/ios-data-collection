@@ -42,8 +42,10 @@ class ViewController: UIViewController {
     let altimeter = CMAltimeter()
     var locationManager = CLLocationManager()
 
+    let captureSessionQueue: DispatchQueue = DispatchQueue(label: "captureSession", attributes: [])
+    var opQueue: OperationQueue!
+
     /* Manager for camera data */
-    let captureSessionQueue: DispatchQueue = DispatchQueue(label: "sampleBuffer", attributes: [])
     var assetWriter : AVAssetWriter?
     var pixelBufferAdaptor : AVAssetWriterInputPixelBufferAdaptor?
     var videoInput : AVAssetWriterInput?
@@ -61,6 +63,9 @@ class ViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+
+        opQueue = OperationQueue()
+        opQueue.underlyingQueue = captureSessionQueue
 
         // Tap gesture for start/stop
         let tap = UITapGestureRecognizer(target: self, action: #selector(self.toggleCapture(_:)))
@@ -82,6 +87,7 @@ class ViewController: UIViewController {
         let configuration = ARWorldTrackingConfiguration()
         arView.session.run(configuration)
         arView.session.delegate = self
+        arView.session.delegateQueue = captureSessionQueue
 
         timeLabel.text = ""
     }
@@ -270,7 +276,7 @@ class ViewController: UIViewController {
         }
         if motionManager.isAccelerometerAvailable && !motionManager.isAccelerometerActive {
             motionManager.accelerometerUpdateInterval = self.ACCELEROMETER_DT
-            motionManager.startAccelerometerUpdates(to: OperationQueue.current!, withHandler: {(accelerometerData: CMAccelerometerData!, error: Error!) in
+            motionManager.startAccelerometerUpdates(to: opQueue, withHandler: {(accelerometerData: CMAccelerometerData!, error: Error!) in
                 if (error != nil){
                     print("\(String(describing: error))");
                 }
@@ -299,7 +305,7 @@ class ViewController: UIViewController {
         }
         if motionManager.isGyroAvailable && !motionManager.isGyroActive {
             motionManager.gyroUpdateInterval = self.GYROSCOPE_DT
-            motionManager.startGyroUpdates(to: OperationQueue.current!, withHandler: {(gyroData: CMGyroData!, error: Error!) in
+            motionManager.startGyroUpdates(to: opQueue, withHandler: {(gyroData: CMGyroData!, error: Error!) in
                 if (self.isCapturing) {
                     let str = NSString(format:"%f,%d,%f,%f,%f\n",
                                        gyroData.timestamp,
@@ -324,7 +330,7 @@ class ViewController: UIViewController {
         }
         if motionManager.isMagnetometerAvailable && !motionManager.isMagnetometerActive {
             motionManager.magnetometerUpdateInterval = self.MAGNETOMETER_DT
-            motionManager.startMagnetometerUpdates(to: OperationQueue.current!, withHandler: {(magnetometerData: CMMagnetometerData!, error: Error!) in
+            motionManager.startMagnetometerUpdates(to: opQueue, withHandler: {(magnetometerData: CMMagnetometerData!, error: Error!) in
                 if (error != nil){
                     print("\(String(describing: error))");
                 }
@@ -351,7 +357,7 @@ class ViewController: UIViewController {
             return
         }
         if CMAltimeter.isRelativeAltitudeAvailable() {
-            altimeter.startRelativeAltitudeUpdates(to: OperationQueue.current!, withHandler: {(altitudeData: CMAltitudeData!, error: Error!)in
+            altimeter.startRelativeAltitudeUpdates(to: opQueue, withHandler: {(altitudeData: CMAltitudeData!, error: Error!)in
                 if (error != nil){
                     print("\(String(describing: error))");
                 }
@@ -426,76 +432,74 @@ extension ViewController: ARSessionDelegate {
         if !UserDefaults.standard.bool(forKey: SettingsKeys.VideoARKitEnableKey) {
             return
         }
-        // Execute in its own thread
-        captureSessionQueue.async {
-            // Timestamp
-            let timestamp = CMTimeMakeWithSeconds(frame.timestamp, preferredTimescale: 1000000)
 
-            // Start session at first recorded frame
-            if (self.isCapturing && frame.timestamp > self.startTime && self.assetWriter?.status != AVAssetWriter.Status.writing) {
-                self.assetWriter!.startWriting()
-                self.assetWriter!.startSession(atSourceTime: timestamp)
+        // Timestamp
+        let timestamp = CMTimeMakeWithSeconds(frame.timestamp, preferredTimescale: 1000000)
+
+        // Start session at first recorded frame
+        if (self.isCapturing && frame.timestamp > self.startTime && self.assetWriter?.status != AVAssetWriter.Status.writing) {
+            self.assetWriter!.startWriting()
+            self.assetWriter!.startSession(atSourceTime: timestamp)
+        }
+
+        // If recording is active append bufferImage to video frame
+        while (self.isCapturing && frame.timestamp > self.startTime) {
+            if (self.firstArFrame) {
+                self.firstFrameTimestamp = frame.timestamp
+                self.firstArFrame = false
+            }
+            else {
+                DispatchQueue.main.async {
+                    self.timeLabel.text =  String(format: "Rec Time: %.02f s", frame.timestamp - self.firstFrameTimestamp)
+                }
             }
 
-            // If recording is active append bufferImage to video frame
-            while (self.isCapturing && frame.timestamp > self.startTime) {
-                if (self.firstArFrame) {
-                    self.firstFrameTimestamp = frame.timestamp
-                    self.firstArFrame = false
-                }
-                else {
-                    DispatchQueue.main.async {
-                        self.timeLabel.text =  String(format: "Rec Time: %.02f s", frame.timestamp - self.firstFrameTimestamp)
+            if (UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey)) {
+                // Append ARKit point cloud to csv
+                if let featurePointsArray = frame.rawFeaturePoints?.points {
+                    var pstr = NSString(format:"%f,%d,%d",
+                                        frame.timestamp,
+                                        self.POINTCLOUD_ID,
+                                        self.frameCount)
+                    // Append each point to str
+                    for point in featurePointsArray {
+                        pstr = NSString(format:"%@,%f,%f,%f",
+                                        pstr,
+                                        point.x, point.y, point.z)
+                    }
+                    pstr = NSString(format:"%@\n", pstr)
+                    if self.outputStream.write(pstr as String) < 0 {
+                        print("Write ARKit point cloud failure");
                     }
                 }
+            }
 
-                if (UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey)) {
-                    // Append ARKit point cloud to csv
-                    if let featurePointsArray = frame.rawFeaturePoints?.points {
-                        var pstr = NSString(format:"%f,%d,%d",
-                                            frame.timestamp,
-                                            self.POINTCLOUD_ID,
-                                            self.frameCount)
-                        // Append each point to str
-                        for point in featurePointsArray {
-                            pstr = NSString(format:"%@,%f,%f,%f",
-                                            pstr,
-                                            point.x, point.y, point.z)
-                        }
-                        pstr = NSString(format:"%@\n", pstr)
-                        if self.outputStream.write(pstr as String) < 0 {
-                            print("Write ARKit point cloud failure");
-                        }
-                    }
-                }
+            // Append images to video
+            if (self.videoInput!.isReadyForMoreMediaData) {
+                // Append image to video
+                self.pixelBufferAdaptor?.append(frame.capturedImage, withPresentationTime: timestamp)
 
-                // Append images to video
-                if (self.videoInput!.isReadyForMoreMediaData) {
-                    // Append image to video
-                    self.pixelBufferAdaptor?.append(frame.capturedImage, withPresentationTime: timestamp)
+                let translation = frame.camera.transform.translation
+                let eulerAngles = frame.camera.eulerAngles
+                let intrinsics = frame.camera.intrinsics
+                let transform = frame.camera.transform
 
-                    let translation = frame.camera.transform.translation
-                    let eulerAngles = frame.camera.eulerAngles
-                    let intrinsics = frame.camera.intrinsics
-                    let transform = frame.camera.transform
+                // Append ARKit to csv
+                let str = NSString(format:"%f,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
+                    frame.timestamp,
+                    self.ARKIT_ID,
+                    self.frameCount,
+                    translation[0], translation[1], translation[2],
+                    eulerAngles[0], eulerAngles[1], eulerAngles[2],
+                    intrinsics[0][0], intrinsics[1][1], intrinsics[2][0], intrinsics[2][1],
+                    transform[0][0],transform[1][0],transform[2][0],
+                    transform[0][1],transform[1][1],transform[2][1],
+                    transform[0][2],transform[1][2],transform[2][2])
+                if self.outputStream.write(str as String) < 0 { print("Write ARKit failure"); }
 
-                    // Append ARKit to csv
-                    let str = NSString(format:"%f,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
-                        frame.timestamp,
-                        self.ARKIT_ID,
-                        self.frameCount,
-                        translation[0], translation[1], translation[2],
-                        eulerAngles[0], eulerAngles[1], eulerAngles[2],
-                        intrinsics[0][0], intrinsics[1][1], intrinsics[2][0], intrinsics[2][1],
-                        transform[0][0],transform[1][0],transform[2][0],
-                        transform[0][1],transform[1][1],transform[2][1],
-                        transform[0][2],transform[1][2],transform[2][2])
-                    if self.outputStream.write(str as String) < 0 { print("Write ARKit failure"); }
+                self.frameCount = self.frameCount + 1
 
-                    self.frameCount = self.frameCount + 1
-
-                    break
-                }
+                break
             }
         }
     }
