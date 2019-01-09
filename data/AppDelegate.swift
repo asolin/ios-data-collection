@@ -12,8 +12,19 @@ import UIKit
 class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
+    var captureController = CaptureController()
+
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // Link controllers together.
+        if let viewController = window?.rootViewController as? ViewController {
+            viewController.captureControllerDelegate = captureController
+        }
+        else {
+            print("Failed to set captureControllerDelegate.")
+        }
+
+        captureController.start()
+
         return true
     }
 
