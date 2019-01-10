@@ -127,8 +127,6 @@ extension CaptureController: CaptureControllerDelegate {
 
         arSession.pause()
 
-        print("Attempting to start capture");
-
         // Filename from date.
         let date = Date()
         let formatter = DateFormatter()
@@ -142,7 +140,7 @@ extension CaptureController: CaptureControllerDelegate {
         if outputStream != nil {
             outputStream.open()
         } else {
-            print("Unable to open file.")
+            print("Unable to open csv output file.")
             return
         }
 
@@ -152,7 +150,7 @@ extension CaptureController: CaptureControllerDelegate {
         if pointcloudStream != nil {
             pointcloudStream.open()
         } else {
-            print("Unable to open pointcloud file.")
+            print("Unable to open pointcloud output file.")
                 return
         }
         */
@@ -165,7 +163,9 @@ extension CaptureController: CaptureControllerDelegate {
             TIMESTAMP_ID,
             Date().timeIntervalSince1970,
             Clock.now?.timeIntervalSince1970 ?? 0)
-        if self.outputStream.write(str as String) < 0 { print("Write timestamp failure"); }
+        if self.outputStream.write(str as String) < 0 {
+            print("Failure writing timestamp to output csv.")
+        }
         firstFrameTimestamp = 0.0
         lastTimestamp = 0.0
 
@@ -190,8 +190,6 @@ extension CaptureController: CaptureControllerDelegate {
     }
 
     func stopCapture() {
-        print("Attempting to stop capture");
-
         isCapturing = false
 
         // Stop video capture.
@@ -202,14 +200,11 @@ extension CaptureController: CaptureControllerDelegate {
                     return
                 }
                 assetWriter.finishWriting(completionHandler: {
-                    print("Asset writer stopped.")
-
                     // Move video file after assetWriter is finished.
                     let documentsPath = try! FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
                     let fileManager = FileManager.default
                     if UserDefaults.standard.bool(forKey: SettingsKeys.VideoARKitEnableKey) {
                         let destinationVideoPath = NSURL(fileURLWithPath: documentsPath.absoluteString).appendingPathComponent(self.filename)?.appendingPathExtension("mov")
-
                         do {
                             try fileManager.moveItem(at: assetWriter.outputURL, to: destinationVideoPath!)
                         } catch let error as NSError {
@@ -250,6 +245,7 @@ extension CaptureController: CaptureControllerDelegate {
             }
         }
         */
+        print("Recording stopped.")
     }
 }
 
@@ -289,7 +285,7 @@ extension CaptureController: ARSessionDelegate {
                 }
                 pstr = NSString(format:"%@\n", pstr)
                 if self.outputStream.write(pstr as String) < 0 {
-                    print("Write ARKit point cloud failure");
+                    print("Failure writing ARKit point cloud.")
                 }
             }
         }
@@ -314,7 +310,9 @@ extension CaptureController: ARSessionDelegate {
                 transform[0][0],transform[1][0],transform[2][0],
                 transform[0][1],transform[1][1],transform[2][1],
                 transform[0][2],transform[1][2],transform[2][2])
-            if self.outputStream.write(str as String) < 0 { print("Write ARKit failure"); }
+            if self.outputStream.write(str as String) < 0 {
+                print("Failure writing ARKit to output csv.")
+                }
 
             self.frameCount = self.frameCount + 1
         }
@@ -341,7 +339,9 @@ extension CaptureController: CLLocationManagerDelegate {
                 loc.altitude,
                 loc.verticalAccuracy,
                 loc.speed)
-                if self.outputStream.write(str as String) < 0 { print("Write location failure"); }
+            if self.outputStream.write(str as String) < 0 {
+                print("Failure writing location to output csv.")
+            }
         }
     }
 }
