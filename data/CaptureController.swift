@@ -159,7 +159,8 @@ extension CaptureController: CaptureControllerDelegate {
         }
         */
 
-        /* Store start time */
+        // Store start time.
+        // There is no longer guarantee this is smaller than frame timestamps.
         startTime = ProcessInfo.processInfo.systemUptime
         let str = NSString(format:"%f,%d,%f,%f,0\n",
             startTime,
@@ -270,69 +271,68 @@ extension CaptureController: ARSessionDelegate {
             return
         }
 
-        let timestamp = CMTimeMakeWithSeconds(frame.timestamp, preferredTimescale: 1000000)
-
-        // Start session at first recorded frame
-        if (self.isCapturing && frame.timestamp > self.startTime && self.assetWriter?.status != AVAssetWriter.Status.writing) {
-            self.assetWriter!.startWriting()
-            self.assetWriter!.startSession(atSourceTime: timestamp)
+        if !isCapturing || assetWriter == nil {
+            return
         }
 
-        // If recording is active append bufferImage to video frame
-        while (self.isCapturing && frame.timestamp > self.startTime) {
-            self.lastTimestamp = frame.timestamp
-            if (self.firstArFrame) {
-                self.firstFrameTimestamp = frame.timestamp
-                self.firstArFrame = false
-            }
+        let timestamp = CMTimeMakeWithSeconds(frame.timestamp, preferredTimescale: 1000000)
+        lastTimestamp = frame.timestamp
 
-            if (UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey)) {
-                // Append ARKit point cloud to csv
-                if let featurePointsArray = frame.rawFeaturePoints?.points {
-                    var pstr = NSString(format:"%f,%d,%d",
-                                        frame.timestamp,
-                                        POINTCLOUD_ID,
-                                        self.frameCount)
-                    // Append each point to str
-                    for point in featurePointsArray {
-                        pstr = NSString(format:"%@,%f,%f,%f",
-                                        pstr,
-                                        point.x, point.y, point.z)
-                    }
-                    pstr = NSString(format:"%@\n", pstr)
-                    if self.outputStream.write(pstr as String) < 0 {
-                        print("Write ARKit point cloud failure");
-                    }
+        // Start session at first recorded frame
+        if (firstArFrame) {
+            assetWriter!.startWriting()
+            assetWriter!.startSession(atSourceTime: timestamp)
+            firstFrameTimestamp = frame.timestamp
+            firstArFrame = false
+        }
+
+        if (UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey)) {
+            // Append ARKit point cloud to csv
+            if let featurePointsArray = frame.rawFeaturePoints?.points {
+                var pstr = NSString(format:"%f,%d,%d",
+                                    frame.timestamp,
+                                    POINTCLOUD_ID,
+                                    self.frameCount)
+                // Append each point to str
+                for point in featurePointsArray {
+                    pstr = NSString(format:"%@,%f,%f,%f",
+                                    pstr,
+                                    point.x, point.y, point.z)
+                }
+                pstr = NSString(format:"%@\n", pstr)
+                if self.outputStream.write(pstr as String) < 0 {
+                    print("Write ARKit point cloud failure");
                 }
             }
+        }
 
-            // Append images to video
-            if (self.videoInput!.isReadyForMoreMediaData) {
-                // Append image to video
-                self.pixelBufferAdaptor?.append(frame.capturedImage, withPresentationTime: timestamp)
+        // Append images to video
+        if (self.videoInput!.isReadyForMoreMediaData) {
+            // Append image to video
+            self.pixelBufferAdaptor?.append(frame.capturedImage, withPresentationTime: timestamp)
 
-                let translation = frame.camera.transform.translation
-                let eulerAngles = frame.camera.eulerAngles
-                let intrinsics = frame.camera.intrinsics
-                let transform = frame.camera.transform
+            let translation = frame.camera.transform.translation
+            let eulerAngles = frame.camera.eulerAngles
+            let intrinsics = frame.camera.intrinsics
+            let transform = frame.camera.transform
 
-                // Append ARKit to csv
-                let str = NSString(format:"%f,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
-                    frame.timestamp,
-                    ARKIT_ID,
-                    self.frameCount,
-                    translation[0], translation[1], translation[2],
-                    eulerAngles[0], eulerAngles[1], eulerAngles[2],
-                    intrinsics[0][0], intrinsics[1][1], intrinsics[2][0], intrinsics[2][1],
-                    transform[0][0],transform[1][0],transform[2][0],
-                    transform[0][1],transform[1][1],transform[2][1],
-                    transform[0][2],transform[1][2],transform[2][2])
-                if self.outputStream.write(str as String) < 0 { print("Write ARKit failure"); }
+            // Append ARKit to csv
+            let str = NSString(format:"%f,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
+                frame.timestamp,
+                ARKIT_ID,
+                self.frameCount,
+                translation[0], translation[1], translation[2],
+                eulerAngles[0], eulerAngles[1], eulerAngles[2],
+                intrinsics[0][0], intrinsics[1][1], intrinsics[2][0], intrinsics[2][1],
+                transform[0][0],transform[1][0],transform[2][0],
+                transform[0][1],transform[1][1],transform[2][1],
+                transform[0][2],transform[1][2],transform[2][2])
+            if self.outputStream.write(str as String) < 0 { print("Write ARKit failure"); }
 
-                self.frameCount = self.frameCount + 1
-
-                break
-            }
+            self.frameCount = self.frameCount + 1
+        }
+        else {
+            print("videoInput not ready.")
         }
     }
 }
