@@ -1,11 +1,3 @@
-//
-//  SettingsKeys.swift
-//  data
-//
-//  Created by Adash Ligocki on 20/11/2018.
-//  Copyright © 2018 Arno Solin. All rights reserved.
-//
-
 import Foundation
 
 class SettingsKeys {

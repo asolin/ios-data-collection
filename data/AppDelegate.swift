@@ -1,11 +1,3 @@
-//
-//  AppDelegate.swift
-//  data
-//
-//  Created by Arno Solin on 23.9.2017.
-//  Copyright © 2017 Arno Solin. All rights reserved.
-//
-
 import UIKit
 
 @UIApplicationMain

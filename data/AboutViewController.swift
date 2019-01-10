@@ -1,11 +1,3 @@
-//
-//  AboutViewController.swift
-//  data
-//
-//  Created by Adash Ligocki on 21/11/2018.
-//  Copyright © 2018 Arno Solin. All rights reserved.
-//
-
 import UIKit
 
 private let descriptionText: String = """

@@ -1,11 +1,3 @@
-//
-//  FilesViewController.swift
-//  data
-//
-//  Created by Arno Solin on 25.9.2017.
-//  Copyright © 2017 Arno Solin. All rights reserved.
-//
-
 import UIKit
 
 class FilesViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {

@@ -1,11 +1,3 @@
-//
-//  SettingsTableViewCell.swift
-//  data
-//
-//  Created by Adash Ligocki on 25/11/2018.
-//  Copyright © 2018 Arno Solin. All rights reserved.
-//
-
 import UIKit
 
 protocol SettingsTableViewProtocol {
