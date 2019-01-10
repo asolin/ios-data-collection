@@ -52,13 +52,30 @@ class CaptureController: NSObject {
         Clock.sync()
     }
 
-    private func runVideoAndARKitRecording() {
+    private func setupARSession() {
         if !UserDefaults.standard.bool(forKey: SettingsKeys.VideoARKitEnableKey) {
             return
         }
 
-        let videoPath = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(filename).appendingPathExtension("mov")
+        let configuration = ARWorldTrackingConfiguration()
+        // Resolution can be set starting from iOS 11.3. Default seems to be the best one.
+        /*
+        if #available(iOS 11.3, *) {
+            print(configuration.videoFormat)
+            for f in ARWorldTrackingConfiguration.supportedVideoFormats {
+                print(f)
+            }
+        }
+        */
+        configuration.planeDetection = .horizontal
+        arSession.run(configuration, options: [.resetTracking, .removeExistingAnchors])
 
+        frameCount = 0;
+        firstArFrame = true
+    }
+
+    private func setupAssetWriter(_ frame: ARFrame) {
+        let videoPath = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(filename).appendingPathExtension("mov")
         do {
             assetWriter = try AVAssetWriter(outputURL: videoPath, fileType: AVFileType.mov )
         } catch {
@@ -66,10 +83,12 @@ class CaptureController: NSObject {
             return
         }
 
+        // The width and height must match the input or the system will silently
+        // stretch the frames.
         let videoOutputSettings: Dictionary<String, AnyObject> = [
-            AVVideoCodecKey : AVVideoCodecType.h264 as AnyObject,
-            AVVideoWidthKey : 1280 as AnyObject,
-            AVVideoHeightKey : 720 as AnyObject
+            AVVideoCodecKey: AVVideoCodecType.h264 as AnyObject,
+            AVVideoWidthKey: CVPixelBufferGetWidth(frame.capturedImage) as AnyObject,
+            AVVideoHeightKey: CVPixelBufferGetHeight(frame.capturedImage) as AnyObject
         ]
 
         // If grayscale: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
@@ -84,13 +103,10 @@ class CaptureController: NSObject {
         pixelBufferAdaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: videoInput!, sourcePixelBufferAttributes: sourceBufferAttributes)
 
         assetWriter!.add(videoInput!)
+        assetWriter!.startWriting()
 
-        let configuration = ARWorldTrackingConfiguration()
-        configuration.planeDetection = .horizontal
-        arSession.run(configuration, options: [.resetTracking, .removeExistingAnchors])
-
-        frameCount = 0;
-        firstArFrame = true
+        let timestamp = CMTimeMakeWithSeconds(frame.timestamp, preferredTimescale: 1000000)
+        assetWriter!.startSession(atSourceTime: timestamp)
     }
 
     private func runLocation() {
@@ -182,10 +198,10 @@ extension CaptureController: CaptureControllerDelegate {
         if UserDefaults.standard.bool(forKey: SettingsKeys.BarometerEnableKey) {
             runBarometerDataAcquisition(altimeter, opQueue, outputStream)
         }
-        runLocation();
-        runVideoAndARKitRecording()
+        runLocation()
+        setupARSession()
 
-        isCapturing = true;
+        isCapturing = true
         print("Recording started!")
     }
 
@@ -256,7 +272,7 @@ extension CaptureController: ARSessionDelegate {
             return
         }
 
-        if !isCapturing || assetWriter == nil {
+        if !isCapturing {
             return
         }
 
@@ -265,8 +281,10 @@ extension CaptureController: ARSessionDelegate {
 
         // Initialization.
         if (firstArFrame) {
-            assetWriter!.startWriting()
-            assetWriter!.startSession(atSourceTime: timestamp)
+            // Setup assetWriter here because this seems to be the only place where
+            // we have certain information about the input video resolution, a required
+            // parameter to video output.
+            setupAssetWriter(frame)
             firstFrameTimestamp = frame.timestamp
             firstArFrame = false
         }
