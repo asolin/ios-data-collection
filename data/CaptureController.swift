@@ -10,6 +10,7 @@ import Kronos
 protocol CaptureControllerDelegate: class {
     func capturing() -> Bool
     func setARSession(_ arSession: ARSession)
+    func getRecTime() -> Optional<TimeInterval>
     func startCapture()
     func stopCapture()
 }
@@ -39,6 +40,7 @@ class CaptureController: NSObject {
     private var startTime : TimeInterval = 0
     private var firstArFrame : Bool = true
     private var firstFrameTimestamp : TimeInterval = 0.0
+    private var lastTimestamp : TimeInterval = 0.0
 
     func start() {
         opQueue = OperationQueue()
@@ -111,6 +113,15 @@ extension CaptureController: CaptureControllerDelegate {
         self.arSession = arSession
     }
 
+    func getRecTime() -> Optional<TimeInterval> {
+        if self.isCapturing {
+            return Optional.some(lastTimestamp - firstFrameTimestamp)
+        }
+        else {
+            return Optional.none
+        }
+    }
+
     func startCapture() {
         Clock.sync()
 
@@ -156,6 +167,8 @@ extension CaptureController: CaptureControllerDelegate {
             Date().timeIntervalSince1970,
             Clock.now?.timeIntervalSince1970 ?? 0)
         if self.outputStream.write(str as String) < 0 { print("Write timestamp failure"); }
+        firstFrameTimestamp = 0.0
+        lastTimestamp = 0.0
 
         // Setup data acquisition.
         if UserDefaults.standard.bool(forKey: SettingsKeys.AccEnableKey) {
@@ -257,7 +270,6 @@ extension CaptureController: ARSessionDelegate {
             return
         }
 
-        // Timestamp
         let timestamp = CMTimeMakeWithSeconds(frame.timestamp, preferredTimescale: 1000000)
 
         // Start session at first recorded frame
@@ -268,17 +280,10 @@ extension CaptureController: ARSessionDelegate {
 
         // If recording is active append bufferImage to video frame
         while (self.isCapturing && frame.timestamp > self.startTime) {
+            self.lastTimestamp = frame.timestamp
             if (self.firstArFrame) {
                 self.firstFrameTimestamp = frame.timestamp
                 self.firstArFrame = false
-            }
-            else {
-                // TODO Make this functional again.
-                /*
-                DispatchQueue.main.async {
-                    self.timeLabel.text =  String(format: "Rec Time: %.02f s", frame.timestamp - self.firstFrameTimestamp)
-                }
-                */
             }
 
             if (UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey)) {

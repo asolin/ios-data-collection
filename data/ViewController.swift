@@ -16,6 +16,8 @@ class ViewController: UIViewController {
     @IBOutlet weak private var arView: ARSCNView!
     @IBOutlet weak private var timeLabel: UILabel!
 
+    private var updateTimer: DispatchSourceTimer!
+
     var captureControllerDelegate: CaptureControllerDelegate!
 
     override func viewDidLoad() {
@@ -29,6 +31,8 @@ class ViewController: UIViewController {
         let tap = UITapGestureRecognizer(target: self, action: #selector(self.toggleCapture(_:)))
         tap.numberOfTapsRequired = 1
         toggleButton.addGestureRecognizer(tap);
+
+        setUpdateTimer()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -74,6 +78,21 @@ class ViewController: UIViewController {
             //animateButtonRadius(toValue: toggleButton.frame.height/2.0)
             UIApplication.shared.isIdleTimerDisabled = false
         }
+    }
+
+    private func setUpdateTimer() {
+        updateTimer?.cancel()
+        updateTimer = DispatchSource.makeTimerSource(queue: DispatchQueue.main)
+        updateTimer.schedule(deadline: .now(), repeating: .milliseconds(100), leeway: .milliseconds(10))
+        updateTimer.setEventHandler { [weak self] in
+            if let recTime = self?.captureControllerDelegate.getRecTime() {
+                self?.timeLabel.text = String(format: "Rec time: %.02f s", recTime)
+            }
+            else {
+                self?.timeLabel.text = ""
+            }
+        }
+        updateTimer.resume()
     }
 
     // MARK: - Unwind action for the extra view
