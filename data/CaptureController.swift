@@ -237,6 +237,7 @@ extension CaptureController: CaptureControllerDelegate {
             print("Error occurred while moving data file:\n \(error)")
         }
 
+        /*
         if (UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey)) {
             let pclDestinationFile = NSURL(fileURLWithPath: documentsPath.absoluteString).appendingPathComponent(filename)?.appendingPathExtension("pcl")
             do {
@@ -245,6 +246,7 @@ extension CaptureController: CaptureControllerDelegate {
                 print("Error occurred while moving pointcloud file:\n \(error)")
             }
         }
+        */
     }
 }
 
