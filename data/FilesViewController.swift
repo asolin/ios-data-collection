@@ -9,7 +9,6 @@
 import UIKit
 
 class FilesViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
-    /* Outlets */
     @IBOutlet weak private var tableView: UITableView!
 
     override func viewDidLoad() {
@@ -17,7 +16,7 @@ class FilesViewController: UIViewController, UITableViewDataSource, UITableViewD
     }
 
     override func viewWillAppear(_ animated: Bool) {
-        // Add table view
+        // Add table view.
         tableView.dataSource = self
         tableView.delegate = self
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "myCell")
@@ -65,14 +64,12 @@ class FilesViewController: UIViewController, UITableViewDataSource, UITableViewD
     }
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        // All files
         let list = listFilesFromDocumentsFolder()
 
-        // Path to file
         let documentsPath = try! FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
         let filePath = NSURL(fileURLWithPath: documentsPath.absoluteString).appendingPathComponent((list?[indexPath.row])!)
 
-        // Present share dialog
+        // Present share dialog.
         let activityViewController = UIActivityViewController(activityItems: [filePath!], applicationActivities: nil)
         activityViewController.popoverPresentationController?.sourceView = self.view
         self.present(activityViewController, animated: true, completion: nil)
@@ -80,24 +77,19 @@ class FilesViewController: UIViewController, UITableViewDataSource, UITableViewD
 
     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
         if editingStyle == .delete {
-            // All files
             let list = listFilesFromDocumentsFolder()
 
-            // Path to file
             let documentsPath = try! FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
             let filePath = NSURL(fileURLWithPath: documentsPath.absoluteString).appendingPathComponent((list?[indexPath.row])!)
 
-            // File Manager
             let fileManager = FileManager.default;
 
-            // Delete file
             do {
                 try fileManager.removeItem(at: filePath!);
             } catch let error as NSError {
                 print("Error removing file:\n \(error)")
             }
 
-            // Delete the table view row
             tableView.deleteRows(at: [indexPath], with: .fade)
         }
         else if editingStyle == .insert {

@@ -16,7 +16,6 @@ class SettingsViewController: UIViewController, UITableViewDataSource, SettingsT
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        // Do any additional setup after loading the view.
         settingsTable.dataSource = self
         settingsTable.separatorStyle = UITableViewCell.SeparatorStyle.none
     }

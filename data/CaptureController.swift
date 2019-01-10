@@ -16,9 +16,7 @@ protocol CaptureControllerDelegate: class {
 }
 
 class CaptureController: NSObject {
-    private var arSession: ARSession!
-
-    /* Managers for the sensor data */
+    // Other sensors.
     private let motionManager = CMMotionManager()
     private let altimeter = CMAltimeter()
     private var locationManager = CLLocationManager()
@@ -26,7 +24,8 @@ class CaptureController: NSObject {
     private let captureSessionQueue: DispatchQueue = DispatchQueue(label: "captureSession", attributes: [])
     private var opQueue: OperationQueue!
 
-    /* Manager for camera data */
+    // Camera and video.
+    private var arSession: ARSession!
     private var assetWriter : AVAssetWriter?
     private var pixelBufferAdaptor : AVAssetWriterInputPixelBufferAdaptor?
     private var videoInput : AVAssetWriterInput?
@@ -46,7 +45,6 @@ class CaptureController: NSObject {
         opQueue = OperationQueue()
         opQueue.underlyingQueue = captureSessionQueue
 
-        /* Set up locationManager */
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.delegate = self
         locationManager.requestWhenInUseAuthorization()
@@ -85,12 +83,14 @@ class CaptureController: NSObject {
         videoInput?.transform = CGAffineTransform.init(rotationAngle: CGFloat(Double.pi/2))
         pixelBufferAdaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: videoInput!, sourcePixelBufferAttributes: sourceBufferAttributes)
 
-        // Add video input and start waiting for data
         assetWriter!.add(videoInput!)
 
         let configuration = ARWorldTrackingConfiguration()
         configuration.planeDetection = .horizontal
         arSession.run(configuration, options: [.resetTracking, .removeExistingAnchors])
+
+        frameCount = 0;
+        firstArFrame = true
     }
 
     private func runLocation() {
@@ -125,20 +125,18 @@ extension CaptureController: CaptureControllerDelegate {
     func startCapture() {
         Clock.sync()
 
-        // Pause ARKit for resetting
         arSession.pause()
 
         print("Attempting to start capture");
 
-        /* Create filename for the data */
+        // Filename from date.
         let date = Date()
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd-HH-mm-ss"
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
         filename = "data-" + formatter.string(from: date)
-        print(filename)
 
-        /* Create output stream */
+        // Setup sensor data csv.
         filePath = NSURL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(filename)!.appendingPathExtension("csv") as NSURL
         outputStream = OutputStream(url: filePath as URL, append: false)
         if outputStream != nil {
@@ -185,23 +183,15 @@ extension CaptureController: CaptureControllerDelegate {
             runBarometerDataAcquisition(altimeter, opQueue, outputStream)
         }
         runLocation();
-        // Start ARKit and Video
         runVideoAndARKitRecording()
 
-        // Reset frame count
-        frameCount = 0;
-        firstArFrame = true
-
-        /* Start capturing */
         isCapturing = true;
-
         print("Recording started!")
     }
 
     func stopCapture() {
         print("Attempting to stop capture");
 
-        /* Stop capturing */
         isCapturing = false
 
         // Stop video capture.
@@ -230,18 +220,17 @@ extension CaptureController: CaptureControllerDelegate {
             }
         }
 
-        // Stop sensor capture.
+        // Stop other sensor capture.
         if (motionManager.isAccelerometerActive) {motionManager.stopAccelerometerUpdates(); }
         if (motionManager.isGyroActive) { motionManager.stopGyroUpdates(); }
         if (motionManager.isMagnetometerActive) { motionManager.stopMagnetometerUpdates(); }
         altimeter.stopRelativeAltitudeUpdates();
         locationManager.stopUpdatingLocation()
 
-        /* Close output stream */
         outputStream.close()
         //pointcloudStream.close()
 
-        /* Move data file */
+        // Move data files.
         let documentsPath = try! FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
         let fileManager = FileManager.default
         let destinationPath = NSURL(fileURLWithPath: documentsPath.absoluteString).appendingPathComponent(filename)?.appendingPathExtension("csv")
@@ -278,7 +267,7 @@ extension CaptureController: ARSessionDelegate {
         let timestamp = CMTimeMakeWithSeconds(frame.timestamp, preferredTimescale: 1000000)
         lastTimestamp = frame.timestamp
 
-        // Start session at first recorded frame
+        // Initialization.
         if (firstArFrame) {
             assetWriter!.startWriting()
             assetWriter!.startSession(atSourceTime: timestamp)
@@ -287,13 +276,12 @@ extension CaptureController: ARSessionDelegate {
         }
 
         if (UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey)) {
-            // Append ARKit point cloud to csv
+            // Append ARKit point cloud to csv.
             if let featurePointsArray = frame.rawFeaturePoints?.points {
                 var pstr = NSString(format:"%f,%d,%d",
                                     frame.timestamp,
                                     POINTCLOUD_ID,
                                     self.frameCount)
-                // Append each point to str
                 for point in featurePointsArray {
                     pstr = NSString(format:"%@,%f,%f,%f",
                                     pstr,
@@ -306,9 +294,8 @@ extension CaptureController: ARSessionDelegate {
             }
         }
 
-        // Append images to video
         if (self.videoInput!.isReadyForMoreMediaData) {
-            // Append image to video
+            // Append image to the video.
             self.pixelBufferAdaptor?.append(frame.capturedImage, withPresentationTime: timestamp)
 
             let translation = frame.camera.transform.translation
@@ -316,7 +303,7 @@ extension CaptureController: ARSessionDelegate {
             let intrinsics = frame.camera.intrinsics
             let transform = frame.camera.transform
 
-            // Append ARKit to csv
+            // Append ARKit data to csv.
             let str = NSString(format:"%f,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
                 frame.timestamp,
                 ARKIT_ID,
@@ -342,10 +329,8 @@ extension CaptureController: CLLocationManagerDelegate {
         if (!isCapturing) {
             return
         }
-        // Time offset
         let offset = Date().timeIntervalSinceReferenceDate - ProcessInfo.processInfo.systemUptime
 
-        // For each location
         for loc in locations {
             let str = NSString(format:"%f,%d,%.8f,%.8f,%f,%f,%f,%f\n",
                 loc.timestamp.timeIntervalSinceReferenceDate-offset,

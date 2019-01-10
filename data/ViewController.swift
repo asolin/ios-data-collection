@@ -23,11 +23,10 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        /* Set up ARKit */
         arView.delegate = self
         captureControllerDelegate.setARSession(arView.session)
 
-        // Tap gesture for start/stop
+        // Tap gesture for start/stop.
         let tap = UITapGestureRecognizer(target: self, action: #selector(self.toggleCapture(_:)))
         tap.numberOfTapsRequired = 1
         toggleButton.addGestureRecognizer(tap);
@@ -62,7 +61,6 @@ class ViewController: UIViewController {
 
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
-        // Dispose of any resources that can be recreated.
     }
 
     @objc private func toggleCapture(_ sender: UITapGestureRecognizer) {
