@@ -215,6 +215,7 @@ extension CaptureController: CaptureControllerDelegate {
         captureSessionQueue.async {
             if let assetWriter = self.assetWriter {
                 if assetWriter.status != AVAssetWriter.Status.writing {
+                    print("Expected assetWriter to be writing.")
                     return
                 }
                 assetWriter.finishWriting(completionHandler: {
