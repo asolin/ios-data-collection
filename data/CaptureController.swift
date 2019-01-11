@@ -9,7 +9,7 @@ import Kronos
 
 protocol CaptureControllerDelegate: class {
     func capturing() -> Bool
-    func setARSession(_ arSession: ARSession)
+    func startCamera(_ arSession: ARSession) -> AVCaptureSession
     func getRecTime() -> Optional<TimeInterval>
     func startCapture()
     func stopCapture()
@@ -30,6 +30,16 @@ class CaptureController: NSObject {
     private var pixelBufferAdaptor : AVAssetWriterInputPixelBufferAdaptor?
     private var videoInput : AVAssetWriterInput?
 
+    private let cameraMode = CameraMode.AV
+    // private let cameraMode = CameraMode.ARKit
+    private var captureSession = AVCaptureSession()
+    private var cameraInput: AVCaptureDeviceInput?
+    private var camera: AVCaptureDevice!
+    private let preset = AVCaptureSession.Preset.hd1920x1080
+    // private let preset = AVCaptureSession.Preset.hd1280x720
+    // private let preset = AVCaptureSession.Preset.low
+    private let fps: Int32 = 60
+
     private var isCapturing : Bool = false
     private var outputStream : OutputStream!
     //private var pointcloudStream : OutputStream!
@@ -37,7 +47,7 @@ class CaptureController: NSObject {
     private var filePath : NSURL!
     private var frameCount = 0
     private var startTime : TimeInterval = 0
-    private var firstArFrame : Bool = true
+    private var firstFrame : Bool = true
     private var firstFrameTimestamp : TimeInterval = 0.0
     private var lastTimestamp : TimeInterval = 0.0
 
@@ -52,29 +62,99 @@ class CaptureController: NSObject {
         Clock.sync()
     }
 
-    private func setupARSession() {
-        if !UserDefaults.standard.bool(forKey: SettingsKeys.VideoARKitEnableKey) {
-            return
+    func startAVCamera() {
+        func configureCaptureDevice() throws {
+            if captureSession.canSetSessionPreset(preset) {
+                captureSession.sessionPreset = preset
+            }
+            else {
+                throw CameraControllerError.unsupportedPreset
+            }
+
+            // Use the device type with shortest focal length.
+            let deviceType = AVCaptureDevice.DeviceType.builtInWideAngleCamera
+            let session = AVCaptureDevice.DiscoverySession(deviceTypes: [deviceType], mediaType: AVMediaType.video, position: .back)
+
+            let cameras = session.devices.compactMap { $0 }
+            guard let camera = cameras.first else { throw CameraControllerError.backCameraNotAvailable }
+            self.cameraInput = try AVCaptureDeviceInput(device: camera)
+            if captureSession.canAddInput(self.cameraInput!) {
+                captureSession.addInput(self.cameraInput!)
+            }
+
+            // The remaining configuration must come after setting any session presets.
+            try camera.lockForConfiguration()
+
+            // Lock focus to the maximum value 1.0.
+            if camera.isLockingFocusWithCustomLensPositionSupported {
+                camera.setFocusModeLocked(lensPosition: 1.0, completionHandler: nil)
+            }
+
+            // Default on my testing iPhone X is duration CMTimeMake(1, 50) and
+            // continuously automatically adjusting iso value. It doesn't seem
+            // possible to fix duration to custom value while letting the iso vary.
+            if camera.isExposureModeSupported(AVCaptureDevice.ExposureMode.custom) {
+                camera.setExposureModeCustom(duration: CMTimeMake(value: 1, timescale: 100), iso: Float(400), completionHandler: nil)
+            }
+
+            // According to Apple docs changing exposure can change frame duration settings, so set fps last.
+            let r = camera.activeFormat.videoSupportedFrameRateRanges.first!
+            var frameDur = CMTimeMake(value: 1, timescale: fps)
+            if frameDur > r.maxFrameDuration { frameDur = r.maxFrameDuration }
+            if frameDur < r.minFrameDuration { frameDur = r.minFrameDuration }
+            camera.activeVideoMinFrameDuration = frameDur
+            camera.activeVideoMaxFrameDuration = frameDur
+
+            // No zoom by cropping.
+            camera.videoZoomFactor = 1.0
+
+            // Example of locking white balance.
+            /*
+            var gains = camera.deviceWhiteBalanceGains
+            gains.blueGain = 0.5 * camera.maxWhiteBalanceGain
+            gains.greenGain = 1.0
+            gains.redGain = 1.0
+            camera.setWhiteBalanceModeLocked(with: gains, completionHandler: nil)
+            */
+
+            camera.unlockForConfiguration()
+            self.camera = camera
+
+            // Note that it may take some time for the sensors to physically adjust,
+            // so querying some of the values here might not give expected results
+            // (that's what the `completionHandler` callbacks are for).
         }
 
-        let configuration = ARWorldTrackingConfiguration()
-        // Resolution can be set starting from iOS 11.3. Default seems to be the best one.
-        /*
-        if #available(iOS 11.3, *) {
-            print(configuration.videoFormat)
-            for f in ARWorldTrackingConfiguration.supportedVideoFormats {
-                print(f)
+        func configureVideoOutput() throws {
+            let videoOutput = AVCaptureVideoDataOutput()
+
+            videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as AnyHashable as! String: NSNumber(value: kCVPixelFormatType_32BGRA)]
+
+            //videoOutput.alwaysDiscardsLateVideoFrames = true
+            videoOutput.setSampleBufferDelegate(self, queue: captureSessionQueue)
+            guard captureSession.canAddOutput(videoOutput) else { throw CameraControllerError.unknown }
+            captureSession.addOutput(videoOutput)
+            guard let connection = videoOutput.connection(with: AVFoundation.AVMediaType.video) else { throw CameraControllerError.unknown }
+            if connection.isVideoOrientationSupported {
+                connection.videoOrientation = .portrait
+            }
+            if connection.isCameraIntrinsicMatrixDeliverySupported {
+                // Inserts the intrinsic matrix in each sample buffer.
+                connection.isCameraIntrinsicMatrixDeliveryEnabled = true
             }
         }
-        */
-        configuration.planeDetection = .horizontal
-        arSession.run(configuration, options: [.resetTracking, .removeExistingAnchors])
 
-        frameCount = 0;
-        firstArFrame = true
+        do {
+            try configureCaptureDevice()
+            try configureVideoOutput()
+            self.captureSession.startRunning()
+        }
+        catch {
+            print("\(error)")
+        }
     }
 
-    private func setupAssetWriter(_ frame: ARFrame) {
+    private func setupAssetWriter(_ pixelBuffer: CVPixelBuffer, _ timestamp: CMTime) {
         let videoPath = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(filename).appendingPathExtension("mov")
         do {
             assetWriter = try AVAssetWriter(outputURL: videoPath, fileType: AVFileType.mov )
@@ -87,8 +167,8 @@ class CaptureController: NSObject {
         // stretch the frames.
         let videoOutputSettings: Dictionary<String, AnyObject> = [
             AVVideoCodecKey: AVVideoCodecType.h264 as AnyObject,
-            AVVideoWidthKey: CVPixelBufferGetWidth(frame.capturedImage) as AnyObject,
-            AVVideoHeightKey: CVPixelBufferGetHeight(frame.capturedImage) as AnyObject
+            AVVideoWidthKey: CVPixelBufferGetWidth(pixelBuffer) as AnyObject,
+            AVVideoHeightKey: CVPixelBufferGetHeight(pixelBuffer) as AnyObject
         ]
 
         // If grayscale: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
@@ -107,7 +187,6 @@ class CaptureController: NSObject {
         assetWriter!.add(videoInput!)
         assetWriter!.startWriting()
 
-        let timestamp = CMTimeMakeWithSeconds(frame.timestamp, preferredTimescale: 1000000)
         assetWriter!.startSession(atSourceTime: timestamp)
     }
 
@@ -123,12 +202,29 @@ extension CaptureController: CaptureControllerDelegate {
         return isCapturing
     }
 
-    func setARSession(_ arSession: ARSession) {
-        let configuration = ARWorldTrackingConfiguration()
-        arSession.run(configuration)
+    func startCamera(_ arSession: ARSession) -> AVCaptureSession {
         arSession.delegate = self
         arSession.delegateQueue = captureSessionQueue
         self.arSession = arSession
+
+        // Start either AV camera or ARKit session.
+        switch cameraMode {
+        case .AV:
+            startAVCamera()
+        case .ARKit:
+            let configuration = ARWorldTrackingConfiguration()
+            // Resolution can be set starting from iOS 11.3. Default seems to be the best one.
+            /*
+            if #available(iOS 11.3, *) {
+                print(configuration.videoFormat)
+                for f in ARWorldTrackingConfiguration.supportedVideoFormats {
+                    print(f)
+                }
+            }
+            */
+            arSession.run(configuration)
+        }
+        return captureSession
     }
 
     func getRecTime() -> Optional<TimeInterval> {
@@ -142,8 +238,6 @@ extension CaptureController: CaptureControllerDelegate {
 
     func startCapture() {
         Clock.sync()
-
-        arSession.pause()
 
         // Filename from date.
         let date = Date()
@@ -201,7 +295,20 @@ extension CaptureController: CaptureControllerDelegate {
             runBarometerDataAcquisition(altimeter, opQueue, outputStream)
         }
         runLocation()
-        setupARSession()
+
+        // Setup AV camera or ARKit for capturing.
+        switch cameraMode {
+        case .AV:
+            break
+        case .ARKit:
+            //if !UserDefaults.standard.bool(forKey: SettingsKeys.VideoARKitEnableKey) { }
+            arSession.pause()
+            let configuration = ARWorldTrackingConfiguration()
+            configuration.planeDetection = .horizontal
+            arSession.run(configuration, options: [.resetTracking, .removeExistingAnchors])
+        }
+        frameCount = 0;
+        firstFrame = true
 
         isCapturing = true
         print("Recording started!")
@@ -283,13 +390,13 @@ extension CaptureController: ARSessionDelegate {
         lastTimestamp = frame.timestamp
 
         // Initialization.
-        if (firstArFrame) {
+        if (firstFrame) {
             // Setup assetWriter here because this seems to be the only place where
             // we have certain information about the input video resolution, a required
             // parameter to video output.
-            setupAssetWriter(frame)
+            setupAssetWriter(frame.capturedImage, timestamp)
             firstFrameTimestamp = frame.timestamp
-            firstArFrame = false
+            firstFrame = false
         }
 
         if (UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey)) {
@@ -367,6 +474,48 @@ extension CaptureController: CLLocationManagerDelegate {
     }
 }
 
+extension CaptureController: AVCaptureVideoDataOutputSampleBufferDelegate {
+    func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection:
+            AVCaptureConnection) {
+        if !isCapturing {
+            return
+        }
+        let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)!
+        let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+
+        // Initialization.
+        if (firstFrame) {
+            setupAssetWriter(imageBuffer, timestamp)
+            // TODO
+            // firstFrameTimestamp = timestamp
+            firstFrame = false
+        }
+
+        if (self.videoInput!.isReadyForMoreMediaData) {
+            // Append image to the video.
+            self.pixelBufferAdaptor?.append(imageBuffer, withPresentationTime: timestamp)
+        }
+        else {
+            print("captureOutput(): videoInput not ready.")
+        }
+
+        // Camera intrinsic matrix (focal lengths and principal point).
+        // <https://stackoverflow.com/a/48159895>
+        /*
+        var intrinsics = matrix_float3x3()
+        if let camData = CMGetAttachment(sampleBuffer, kCMSampleBufferAttachmentKey_CameraIntrinsicMatrix, nil) as? Data {
+            intrinsics = camData.withUnsafeBytes { $0.pointee }
+            // Note that it may be necessary to scale the focal lengths depending on resolution.
+        }
+        */
+    }
+
+    func captureOutput(_ output: AVCaptureOutput, didDrop sampleBuffer: CMSampleBuffer, from connection:
+            AVCaptureConnection) {
+        print("Dropped frame in captureOutput().")
+    }
+}
+
 // MARK: - OutputStream: Write Strings
 extension OutputStream {
     func write(_ string: String, encoding: String.Encoding = .utf8, allowLossyConversion: Bool = false) -> Int {
@@ -403,4 +552,15 @@ extension float4x4 {
         let translation = columns.3
         return float3(translation.x, translation.y, translation.z)
     }
+}
+
+private enum CameraControllerError: Swift.Error {
+    case backCameraNotAvailable
+    case unsupportedPreset
+    case unknown
+}
+
+private enum CameraMode {
+    case AV
+    case ARKit
 }

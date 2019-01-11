@@ -3,12 +3,12 @@ import UIKit
 
 @available(iOS 11.0, *)
 class ViewController: UIViewController {
-    /* Outlets */
     @IBOutlet weak private var toggleButton: UIButton!
     @IBOutlet weak private var arView: ARSCNView!
     @IBOutlet weak private var timeLabel: UILabel!
 
     private var updateTimer: DispatchSourceTimer!
+    private var avCameraPreview: AVCaptureVideoPreviewLayer!
 
     var captureControllerDelegate: CaptureControllerDelegate!
 
@@ -16,7 +16,12 @@ class ViewController: UIViewController {
         super.viewDidLoad()
 
         arView.delegate = self
-        captureControllerDelegate.setARSession(arView.session)
+        let avCaptureSession = captureControllerDelegate.startCamera(arView.session)
+
+        avCameraPreview = AVCaptureVideoPreviewLayer(session: avCaptureSession)
+        avCameraPreview.frame.size = arView.frame.size
+        avCameraPreview.videoGravity = AVLayerVideoGravity.resizeAspectFill
+        arView.layer.addSublayer(avCameraPreview)
 
         // Tap gesture for start/stop.
         let tap = UITapGestureRecognizer(target: self, action: #selector(self.toggleCapture(_:)))
