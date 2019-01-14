@@ -7,6 +7,8 @@ protocol SettingsTableViewDelegate {
 class SettingsViewController: UIViewController {
     @IBOutlet weak private var settingsTable: UITableView!
 
+    @IBOutlet weak var cameraModeControl: UISegmentedControl!
+
     private var cellList : [SettingsTableViewCell] = []
 
     override func viewDidLoad() {
@@ -29,6 +31,9 @@ class SettingsViewController: UIViewController {
             UserDefaults.standard.set(true, forKey: key)
             button.setOn(true, animated: false)
         }
+    }
+
+    @IBAction func cameraModeControlValueChanged(_ sender: UISegmentedControl) {
     }
 }
 
