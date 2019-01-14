@@ -1,6 +1,10 @@
 import UIKit
 
-class SettingsViewController: UIViewController, UITableViewDataSource, SettingsTableViewProtocol {
+protocol SettingsTableViewDelegate {
+    func settingsTableViewCell(cell: SettingsTableViewCell, newSwitchValue: Bool, cellTag : String)
+}
+
+class SettingsViewController: UIViewController {
     @IBOutlet weak private var settingsTable: UITableView!
 
     private var cellList : [SettingsTableViewCell] = []
@@ -26,14 +30,37 @@ class SettingsViewController: UIViewController, UITableViewDataSource, SettingsT
             button.setOn(true, animated: false)
         }
     }
+}
 
-    // MARK: - Table view data source
+extension SettingsViewController: SettingsTableViewDelegate {
+    func settingsTableViewCell(cell: SettingsTableViewCell, newSwitchValue: Bool, cellTag: String) {
+        UserDefaults.standard.set(newSwitchValue, forKey: cellTag)
 
+        // Coordinate switch changes.
+        if cellTag == SettingsKeys.PointcloudEnableKey && newSwitchValue {
+            UserDefaults.standard.set(true, forKey: SettingsKeys.VideoARKitEnableKey)
+            for cell in cellList {
+                if cell.cellTag == SettingsKeys.VideoARKitEnableKey {
+                    cell.settingsSwitch.setOn(true, animated: true)
+                }
+            }
+        }
+        else if cellTag == SettingsKeys.VideoARKitEnableKey && !newSwitchValue {
+            UserDefaults.standard.set(false, forKey: SettingsKeys.PointcloudEnableKey)
+            for cell in cellList {
+                if cell.cellTag == SettingsKeys.PointcloudEnableKey {
+                    cell.settingsSwitch.setOn(false, animated: true)
+                }
+            }
+        }
+    }
+}
+
+extension SettingsViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "SettingsCell", for: indexPath) as! SettingsTableViewCell
 
         if indexPath.item < SettingsKeys.keys.count {
-
             let key = SettingsKeys.keys[indexPath.item]
             let title = SettingsCellTitles.titles[key]
 
@@ -60,29 +87,5 @@ class SettingsViewController: UIViewController, UITableViewDataSource, SettingsT
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         cellList = []
         return SettingsKeys.keys.count
-    }
-
-    func settingsTableViewCell(cell: SettingsTableViewCell, newSwitchValue: Bool, cellTag: String) {
-        UserDefaults.standard.set(newSwitchValue, forKey: cellTag)
-
-        if (cellTag == SettingsKeys.PointcloudEnableKey && newSwitchValue == true) {
-
-            UserDefaults.standard.set(true, forKey: SettingsKeys.VideoARKitEnableKey)
-            for cell in cellList {
-                if (cell.cellTag == SettingsKeys.VideoARKitEnableKey){
-                    cell.settingsSwitch.setOn(true, animated: true)
-                }
-            }
-        }
-
-        if (cellTag == SettingsKeys.VideoARKitEnableKey && newSwitchValue == false) {
-
-            UserDefaults.standard.set(false, forKey: SettingsKeys.PointcloudEnableKey)
-            for cell in cellList {
-                if (cell.cellTag == SettingsKeys.PointcloudEnableKey){
-                    cell.settingsSwitch.setOn(false, animated: true)
-                }
-            }
-        }
     }
 }

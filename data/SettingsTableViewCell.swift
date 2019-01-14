@@ -1,16 +1,12 @@
 import UIKit
 
-protocol SettingsTableViewProtocol {
-    func settingsTableViewCell(cell: SettingsTableViewCell, newSwitchValue: Bool, cellTag : String)
-}
-
-class SettingsTableViewCell: UITableViewCell, SettingsTableViewProtocol {
+class SettingsTableViewCell: UITableViewCell {
     @IBOutlet weak var titleLabel: UILabel!
     @IBOutlet weak var settingsSwitch: UISwitch!
     @IBOutlet weak var descriptionLabel: UILabel!
 
-    var cellTag : String = ""
-    var delegate : SettingsTableViewProtocol?
+    var cellTag: String = ""
+    var delegate: SettingsTableViewDelegate?
 
     private func setTitle(title: String) {
         titleLabel.text = title
@@ -37,8 +33,5 @@ class SettingsTableViewCell: UITableViewCell, SettingsTableViewProtocol {
         if delegate != nil {
             delegate!.settingsTableViewCell(cell: self, newSwitchValue: sender.isOn, cellTag: cellTag)
         }
-    }
-
-    func settingsTableViewCell(cell: SettingsTableViewCell, newSwitchValue: Bool, cellTag: String) {
     }
 }
