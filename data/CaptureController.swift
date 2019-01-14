@@ -9,7 +9,7 @@ import Kronos
 
 protocol CaptureControllerDelegate: class {
     func capturing() -> Bool
-    func startCamera(_ arSession: ARSession) -> AVCaptureSession
+    func startCamera(_ cameraMode: CameraMode, _ arSession: ARSession) -> AVCaptureSession
     func getRecTime() -> Optional<TimeInterval>
     func startCapture()
     func stopCapture()
@@ -30,8 +30,7 @@ class CaptureController: NSObject {
     private var pixelBufferAdaptor : AVAssetWriterInputPixelBufferAdaptor?
     private var videoInput : AVAssetWriterInput?
 
-    private let cameraMode = CameraMode.AV
-    // private let cameraMode = CameraMode.ARKit
+    private var cameraMode: CameraMode!
     private var captureSession = AVCaptureSession()
     private var cameraInput: AVCaptureDeviceInput?
     private var camera: AVCaptureDevice!
@@ -202,12 +201,13 @@ extension CaptureController: CaptureControllerDelegate {
         return isCapturing
     }
 
-    func startCamera(_ arSession: ARSession) -> AVCaptureSession {
+    func startCamera(_ cameraMode: CameraMode, _ arSession: ARSession) -> AVCaptureSession {
         arSession.delegate = self
         arSession.delegateQueue = captureSessionQueue
         self.arSession = arSession
 
         // Start either AV camera or ARKit session.
+        self.cameraMode = cameraMode
         switch cameraMode {
         case .AV:
             startAVCamera()
@@ -297,7 +297,7 @@ extension CaptureController: CaptureControllerDelegate {
         runLocation()
 
         // Setup AV camera or ARKit for capturing.
-        switch cameraMode {
+        switch cameraMode! {
         case .AV:
             break
         case .ARKit:
@@ -560,7 +560,7 @@ private enum CameraControllerError: Swift.Error {
     case unknown
 }
 
-private enum CameraMode {
+enum CameraMode {
     case AV
     case ARKit
 }

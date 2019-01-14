@@ -150,7 +150,7 @@
         <!--Settings View Controller-->
         <scene sceneID="D83-s7-act">
             <objects>
-                <viewController id="EfU-vk-QpZ" customClass="SettingsViewController" customModule="data" customModuleProvider="target" sceneMemberID="viewController">
+                <viewController storyboardIdentifier="SettingsViewController" useStoryboardIdentifierAsRestorationIdentifier="YES" id="EfU-vk-QpZ" customClass="SettingsViewController" customModule="data" customModuleProvider="target" sceneMemberID="viewController">
                     <layoutGuides>
                         <viewControllerLayoutGuide type="top" id="nPA-e7-aNE"/>
                         <viewControllerLayoutGuide type="bottom" id="gyL-W1-cNp"/>

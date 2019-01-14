@@ -6,9 +6,9 @@ protocol SettingsTableViewDelegate {
 
 class SettingsViewController: UIViewController {
     @IBOutlet weak private var settingsTable: UITableView!
-
     @IBOutlet weak var cameraModeControl: UISegmentedControl!
 
+    weak var captureControllerDelegate: CaptureControllerDelegate!
     private var cellList : [SettingsTableViewCell] = []
 
     override func viewDidLoad() {
@@ -34,6 +34,10 @@ class SettingsViewController: UIViewController {
     }
 
     @IBAction func cameraModeControlValueChanged(_ sender: UISegmentedControl) {
+        // Change camera mode on change of the setting (or exit from the settings view) so that the
+        // camera preview view updates and that the start capture button won't stall to setup camera.
+        // TODO
+        // captureControllerDelegate.startCamera()
     }
 }
 

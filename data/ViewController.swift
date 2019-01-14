@@ -10,14 +10,14 @@ class ViewController: UIViewController {
     private var updateTimer: DispatchSourceTimer!
     private var avCameraPreview: AVCaptureVideoPreviewLayer!
 
-    var captureControllerDelegate: CaptureControllerDelegate!
+    weak var captureControllerDelegate: CaptureControllerDelegate!
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
         arView.delegate = self
         // On the UI thread for now.
-        let avCaptureSession = captureControllerDelegate.startCamera(arView.session)
+        let avCaptureSession = captureControllerDelegate.startCamera(CameraMode.AV, arView.session)
         avCameraPreview = AVCaptureVideoPreviewLayer(session: avCaptureSession)
 
         // Tap gesture for start/stop.

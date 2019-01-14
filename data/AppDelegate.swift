@@ -10,9 +10,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Link controllers together.
         if let viewController = window?.rootViewController as? ViewController {
             viewController.captureControllerDelegate = captureController
+            let settingsViewController = viewController.storyboard!.instantiateViewController(withIdentifier: "SettingsViewController") as! SettingsViewController
+            settingsViewController.captureControllerDelegate = captureController
         }
         else {
-            print("Failed to set captureControllerDelegate.")
+            print("Failed to setup controller delegates.")
         }
 
         captureController.start()
