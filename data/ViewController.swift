@@ -16,12 +16,9 @@ class ViewController: UIViewController {
         super.viewDidLoad()
 
         arView.delegate = self
+        // On the UI thread for now.
         let avCaptureSession = captureControllerDelegate.startCamera(arView.session)
-
         avCameraPreview = AVCaptureVideoPreviewLayer(session: avCaptureSession)
-        avCameraPreview.frame.size = arView.frame.size
-        avCameraPreview.videoGravity = AVLayerVideoGravity.resizeAspectFill
-        arView.layer.addSublayer(avCameraPreview)
 
         // Tap gesture for start/stop.
         let tap = UITapGestureRecognizer(target: self, action: #selector(self.toggleCapture(_:)))
@@ -54,6 +51,12 @@ class ViewController: UIViewController {
             toggleButton.layer.backgroundColor = UIColor.white.cgColor
             toggleButton.layer.shadowColor = UIColor.white.cgColor
         }
+
+        arView.clipsToBounds = true
+        avCameraPreview.frame = arView.bounds
+        // Use resizeAspectFill instead of resizeAspect for both AV and ARKit camera previews.
+        avCameraPreview.videoGravity = AVLayerVideoGravity.resizeAspectFill
+        arView.layer.addSublayer(avCameraPreview)
     }
 
     override func didReceiveMemoryWarning() {
