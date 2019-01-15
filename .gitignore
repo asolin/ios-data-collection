@@ -47,7 +47,10 @@ playground.xcworkspace
 #
 Podfile.lock
 Pods/
+
+# Xcode workspaces
 data.xcworkspace/
+project.xcworkspace
 
 # Carthage
 #
