@@ -169,8 +169,8 @@
                                     <segue destination="IaQ-Qv-kEr" kind="unwind" unwindAction="unwindToMainWithSegue:" id="FqA-di-LeV"/>
                                 </connections>
                             </button>
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Session Settings" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="d6O-JD-tqQ">
-                                <rect key="frame" x="134" y="20" width="152" height="26"/>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Settings" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="d6O-JD-tqQ">
+                                <rect key="frame" x="172.5" y="20" width="75.5" height="26"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="21"/>
                                 <nil key="textColor"/>
                                 <nil key="highlightedColor"/>
@@ -303,12 +303,6 @@
                                     <segue destination="LgK-4Y-HmT" kind="unwind" unwindAction="unwindToMainWithSegue:" id="17O-HT-Ov3"/>
                                 </connections>
                             </button>
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Description:" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Piu-iL-w7r">
-                                <rect key="frame" x="20" y="62" width="380" height="23"/>
-                                <fontDescription key="fontDescription" type="system" pointSize="19"/>
-                                <nil key="textColor"/>
-                                <nil key="highlightedColor"/>
-                            </label>
                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Lorem Ipsum" lineBreakMode="tailTruncation" numberOfLines="10" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="ji6-fa-nRn">
                                 <rect key="frame" x="40" y="93" width="360" height="20.5"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="17"/>
@@ -345,16 +339,14 @@
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
+                            <constraint firstItem="ji6-fa-nRn" firstAttribute="top" secondItem="bLk-nE-yS5" secondAttribute="bottom" constant="39" id="10k-jI-KN1"/>
                             <constraint firstItem="bLk-nE-yS5" firstAttribute="top" secondItem="JqR-iE-GUq" secondAttribute="bottom" constant="8" id="2iz-pD-se2"/>
                             <constraint firstItem="2td-fM-wTX" firstAttribute="leading" secondItem="NeC-mF-8eS" secondAttribute="leadingMargin" id="6KU-5n-fQw"/>
                             <constraint firstItem="ji6-fa-nRn" firstAttribute="trailing" secondItem="NeC-mF-8eS" secondAttribute="trailingMargin" id="6MM-LY-gpg"/>
                             <constraint firstItem="2td-fM-wTX" firstAttribute="top" secondItem="uXy-WB-Brl" secondAttribute="bottom" constant="8" id="8Ja-fy-0KO"/>
-                            <constraint firstItem="Piu-iL-w7r" firstAttribute="leading" secondItem="NeC-mF-8eS" secondAttribute="leadingMargin" id="Uef-Kv-hEn"/>
                             <constraint firstItem="e44-W4-2fx" firstAttribute="leading" secondItem="NeC-mF-8eS" secondAttribute="leadingMargin" id="Uqd-Cy-IsI"/>
                             <constraint firstItem="ncs-1P-NZZ" firstAttribute="leading" secondItem="NeC-mF-8eS" secondAttribute="leadingMargin" constant="20" id="X7G-FK-Uo6"/>
                             <constraint firstItem="JqR-iE-GUq" firstAttribute="top" secondItem="8nM-5g-CUE" secondAttribute="bottom" constant="20" id="XgX-wa-goi"/>
-                            <constraint firstItem="Piu-iL-w7r" firstAttribute="trailing" secondItem="NeC-mF-8eS" secondAttribute="trailingMargin" id="a1Z-up-uyA"/>
-                            <constraint firstItem="Piu-iL-w7r" firstAttribute="top" secondItem="bLk-nE-yS5" secondAttribute="bottom" constant="8" id="aUZ-9j-OlK"/>
                             <constraint firstItem="uXy-WB-Brl" firstAttribute="top" secondItem="ji6-fa-nRn" secondAttribute="bottom" constant="8" id="b4O-Px-wll"/>
                             <constraint firstItem="ncs-1P-NZZ" firstAttribute="top" secondItem="e44-W4-2fx" secondAttribute="bottom" constant="8" id="cS4-Es-q7c"/>
                             <constraint firstItem="JqR-iE-GUq" firstAttribute="centerX" secondItem="NeC-mF-8eS" secondAttribute="centerX" id="cpG-WB-wVN"/>
@@ -363,7 +355,6 @@
                             <constraint firstItem="fIN-w7-q6H" firstAttribute="centerX" secondItem="NeC-mF-8eS" secondAttribute="centerX" id="gq0-7r-7u0"/>
                             <constraint firstItem="ncs-1P-NZZ" firstAttribute="trailing" secondItem="NeC-mF-8eS" secondAttribute="trailingMargin" id="grG-tZ-Xgb"/>
                             <constraint firstItem="pTj-Fj-bkv" firstAttribute="top" secondItem="fIN-w7-q6H" secondAttribute="bottom" constant="8" id="ixc-hb-piC"/>
-                            <constraint firstItem="ji6-fa-nRn" firstAttribute="top" secondItem="Piu-iL-w7r" secondAttribute="bottom" constant="8" id="mcj-YG-EX5"/>
                             <constraint firstItem="bLk-nE-yS5" firstAttribute="trailing" secondItem="NeC-mF-8eS" secondAttribute="trailingMargin" id="nno-Oy-VdZ"/>
                             <constraint firstItem="bLk-nE-yS5" firstAttribute="leading" secondItem="NeC-mF-8eS" secondAttribute="leadingMargin" id="qbG-IY-1IH"/>
                             <constraint firstItem="e44-W4-2fx" firstAttribute="trailing" secondItem="NeC-mF-8eS" secondAttribute="trailingMargin" id="u5V-9f-aWj"/>
@@ -408,8 +399,8 @@
                                     <segue destination="f6B-Gk-rrE" kind="unwind" unwindAction="unwindToMainWithSegue:" id="YBz-Vl-J1r"/>
                                 </connections>
                             </button>
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="File" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Gkd-d3-93g">
-                                <rect key="frame" x="194" y="20" width="32" height="26"/>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Files" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Gkd-d3-93g">
+                                <rect key="frame" x="189" y="20" width="42" height="26"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="21"/>
                                 <nil key="textColor"/>
                                 <nil key="highlightedColor"/>

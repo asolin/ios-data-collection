@@ -29,6 +29,8 @@ class SettingsViewController: UIViewController {
         cameraModeControl.selectedSegmentIndex = UserDefaults.standard.integer(forKey: cameraModeKey)
 
         settingsTable.dataSource = self
+        settingsTable.allowsSelection = false
+        settingsTable.bounces = false
         settingsTable.separatorStyle = UITableViewCell.SeparatorStyle.none
     }
 
