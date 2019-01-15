@@ -11,6 +11,7 @@ class SettingsViewController: UIViewController {
     @IBOutlet weak var cameraModeControl: UISegmentedControl!
 
     weak var captureControllerDelegate: CaptureControllerDelegate!
+    weak var viewControllerDelegate: ViewControllerDelegate!
     private var cellList : [SettingsTableViewCell] = []
 
     override func viewDidLoad() {
@@ -48,10 +49,12 @@ class SettingsViewController: UIViewController {
 
     @IBAction func cameraModeControlValueChanged(_ sender: UISegmentedControl) {
         UserDefaults.standard.set(cameraModeControl.selectedSegmentIndex, forKey: cameraModeKey)
+        let cameraMode = getCameraMode()
 
         // Change camera mode on change of the setting (or exit from the settings view) so that the
         // camera preview view updates and that the start capture button won't stall to setup camera.
-        captureControllerDelegate.startCamera(getCameraMode())
+        captureControllerDelegate.startCamera(cameraMode)
+        viewControllerDelegate.updateCameraMode(cameraMode)
     }
 }
 

@@ -1,6 +1,10 @@
 import ARKit
 import UIKit
 
+protocol ViewControllerDelegate: class {
+    func updateCameraMode(_ cameraMode: CameraMode)
+}
+
 @available(iOS 11.0, *)
 class ViewController: UIViewController {
     @IBOutlet weak private var toggleButton: UIButton!
@@ -35,6 +39,7 @@ class ViewController: UIViewController {
 
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if let settingsViewController = segue.destination as? SettingsViewController {
+            settingsViewController.viewControllerDelegate = self
             settingsViewController.captureControllerDelegate = captureControllerDelegate
         }
     }
@@ -100,14 +105,6 @@ class ViewController: UIViewController {
             else {
                 self?.timeLabel.text = ""
             }
-
-            // Hack.
-            if getCameraMode() == CameraMode.AV {
-                self?.avCameraPreview.isHidden = false
-            }
-            else {
-                self?.avCameraPreview.isHidden = true
-            }
         }
         updateTimer.resume()
     }
@@ -125,6 +122,19 @@ class ViewController: UIViewController {
         animation.duration = 0.5
         toggleButton.layer.add(animation, forKey: "cornerRadius")
         toggleButton.layer.cornerRadius = toValue
+    }
+}
+
+extension ViewController: ViewControllerDelegate {
+    func updateCameraMode(_ cameraMode: CameraMode) {
+        // Once AV Camera has been started, the preview stays opaque even when the camera
+        // is stopped, so we toggle the layer visibility.
+        if cameraMode == CameraMode.AV {
+            self.avCameraPreview.isHidden = false
+        }
+        else {
+            self.avCameraPreview.isHidden = true
+        }
     }
 }
 
