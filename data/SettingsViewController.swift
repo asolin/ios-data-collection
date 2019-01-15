@@ -4,12 +4,6 @@ protocol SettingsTableViewDelegate {
     func settingsTableViewCell(cell: SettingsTableViewCell, newSwitchValue: Bool, cellTag : String)
 }
 
-// Ordered list of segmented control options.
-private let cameraModeOptions = [
-    ("AV Camera", CameraMode.AV),
-    ("ARKit", CameraMode.ARKit),
-]
-
 private let cameraModeKey = "cameraMode"
 
 class SettingsViewController: UIViewController {
@@ -52,16 +46,12 @@ class SettingsViewController: UIViewController {
         }
     }
 
-    private func getCameraMode() -> CameraMode {
-        return cameraModeOptions[cameraModeControl.selectedSegmentIndex].1
-    }
-
     @IBAction func cameraModeControlValueChanged(_ sender: UISegmentedControl) {
-        UserDefaults.standard.set(cameraModeControl.selectedSegmentIndex, forKey: cameraModeKey)
         // Change camera mode on change of the setting (or exit from the settings view) so that the
         // camera preview view updates and that the start capture button won't stall to setup camera.
-        // TODO
-        // captureControllerDelegate.startCamera(getCameraMode())
+        captureControllerDelegate.startCamera(getCameraMode())
+
+        UserDefaults.standard.set(cameraModeControl.selectedSegmentIndex, forKey: cameraModeKey)
     }
 }
 
@@ -121,4 +111,14 @@ extension SettingsViewController: UITableViewDataSource {
         cellList = []
         return SettingsKeys.keys.count
     }
+}
+
+// Ordered list of segmented control options.
+private let cameraModeOptions = [
+    ("AV Camera", CameraMode.AV),
+    ("ARKit", CameraMode.ARKit),
+]
+
+func getCameraMode() -> CameraMode {
+    return cameraModeOptions[UserDefaults.standard.integer(forKey: cameraModeKey)].1
 }

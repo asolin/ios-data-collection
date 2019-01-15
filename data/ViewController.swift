@@ -15,9 +15,13 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        captureControllerDelegate.setARSession(arView.session)
         arView.delegate = self
+
         // On the UI thread for now.
-        let avCaptureSession = captureControllerDelegate.startCamera(CameraMode.AV, arView.session)
+        captureControllerDelegate.startCamera(getCameraMode())
+
+        let avCaptureSession = captureControllerDelegate.getAVCaptureSession()
         avCameraPreview = AVCaptureVideoPreviewLayer(session: avCaptureSession)
 
         // Tap gesture for start/stop.
@@ -26,6 +30,12 @@ class ViewController: UIViewController {
         toggleButton.addGestureRecognizer(tap);
 
         setUpdateTimer()
+    }
+
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if let settingsViewController = segue.destination as? SettingsViewController {
+            settingsViewController.captureControllerDelegate = captureControllerDelegate
+        }
     }
 
     override func viewWillAppear(_ animated: Bool) {

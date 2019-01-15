@@ -9,7 +9,9 @@ import Kronos
 
 protocol CaptureControllerDelegate: class {
     func capturing() -> Bool
-    func startCamera(_ cameraMode: CameraMode, _ arSession: ARSession) -> AVCaptureSession
+    func getAVCaptureSession() -> AVCaptureSession
+    func setARSession(_ arSession: ARSession)
+    func startCamera(_ cameraMode: CameraMode)
     func getRecTime() -> Optional<TimeInterval>
     func startCapture()
     func stopCapture()
@@ -201,11 +203,17 @@ extension CaptureController: CaptureControllerDelegate {
         return isCapturing
     }
 
-    func startCamera(_ cameraMode: CameraMode, _ arSession: ARSession) -> AVCaptureSession {
+    func getAVCaptureSession() -> AVCaptureSession {
+        return captureSession
+    }
+
+    func setARSession(_ arSession: ARSession) {
         arSession.delegate = self
         arSession.delegateQueue = captureSessionQueue
         self.arSession = arSession
+    }
 
+    func startCamera(_ cameraMode: CameraMode) {
         // Start either AV camera or ARKit session.
         self.cameraMode = cameraMode
         switch cameraMode {
@@ -224,7 +232,6 @@ extension CaptureController: CaptureControllerDelegate {
             */
             arSession.run(configuration)
         }
-        return captureSession
     }
 
     func getRecTime() -> Optional<TimeInterval> {
