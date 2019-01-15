@@ -104,10 +104,10 @@ class ViewController: UIViewController {
     private func setUpdateTimer() {
         updateTimer?.cancel()
         updateTimer = DispatchSource.makeTimerSource(queue: DispatchQueue.main)
-        updateTimer.schedule(deadline: .now(), repeating: .milliseconds(500), leeway: .milliseconds(10))
+        updateTimer.schedule(deadline: .now(), repeating: .milliseconds(50), leeway: .milliseconds(10))
         updateTimer.setEventHandler { [weak self] in
             if let recTime = self?.captureControllerDelegate.getRecTime() {
-                self?.timeLabel.text = String(format: "Rec time: %.02f s", recTime)
+                self?.timeLabel.text = String(format: "Rec time: %.01f s", CMTimeGetSeconds(recTime))
             }
             else {
                 self?.timeLabel.text = ""

@@ -12,7 +12,7 @@ protocol CaptureControllerDelegate: class {
     func getAVCaptureSession() -> AVCaptureSession
     func setARSession(_ arSession: ARSession)
     func startCamera(_ cameraMode: CameraMode)
-    func getRecTime() -> Optional<TimeInterval>
+    func getRecTime() -> Optional<CMTime>
     func startCapture()
     func stopCapture()
 }
@@ -45,10 +45,9 @@ class CaptureController: NSObject {
     private var filename : String = ""
     private var filePath : NSURL!
     private var frameCount = 0
-    private var startTime : TimeInterval = 0
     private var firstFrame : Bool = true
-    private var firstFrameTimestamp : TimeInterval = 0.0
-    private var lastTimestamp : TimeInterval = 0.0
+    private var firstFrameTimestamp: CMTime = CMTime.zero
+    private var lastTimestamp: CMTime = CMTime.zero
 
     func start() {
         opQueue = OperationQueue()
@@ -253,8 +252,8 @@ extension CaptureController: CaptureControllerDelegate {
         }
     }
 
-    func getRecTime() -> Optional<TimeInterval> {
-        if self.isCapturing {
+    func getRecTime() -> Optional<CMTime> {
+        if self.isCapturing && lastTimestamp != CMTime.zero && firstFrameTimestamp != CMTime.zero {
             return Optional.some(lastTimestamp - firstFrameTimestamp)
         }
         else {
@@ -295,17 +294,16 @@ extension CaptureController: CaptureControllerDelegate {
 
         // Store start time.
         // There is no longer guarantee this is smaller than frame timestamps.
-        startTime = ProcessInfo.processInfo.systemUptime
         let str = NSString(format:"%f,%d,%f,%f,0\n",
-            startTime,
+            ProcessInfo.processInfo.systemUptime,
             TIMESTAMP_ID,
             Date().timeIntervalSince1970,
             Clock.now?.timeIntervalSince1970 ?? 0)
         if self.outputStream.write(str as String) < 0 {
             print("Failure writing timestamp to output csv.")
         }
-        firstFrameTimestamp = 0.0
-        lastTimestamp = 0.0
+        firstFrameTimestamp = CMTime.zero
+        lastTimestamp = CMTime.zero
 
         // Setup data acquisition.
         if UserDefaults.standard.bool(forKey: SettingsKeys.AccEnableKey) {
@@ -413,7 +411,7 @@ extension CaptureController: ARSessionDelegate {
         }
 
         let timestamp = CMTimeMakeWithSeconds(frame.timestamp, preferredTimescale: 1000000)
-        lastTimestamp = frame.timestamp
+        lastTimestamp = timestamp
 
         // Initialization.
         if (firstFrame) {
@@ -421,7 +419,7 @@ extension CaptureController: ARSessionDelegate {
             // we have certain information about the input video resolution, a required
             // parameter to video output.
             setupAssetWriter(frame.capturedImage, timestamp)
-            firstFrameTimestamp = frame.timestamp
+            firstFrameTimestamp = timestamp
             firstFrame = false
         }
 
@@ -508,12 +506,12 @@ extension CaptureController: AVCaptureVideoDataOutputSampleBufferDelegate {
         }
         let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)!
         let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+        lastTimestamp = timestamp
 
         // Initialization.
         if (firstFrame) {
             setupAssetWriter(imageBuffer, timestamp)
-            // TODO
-            // firstFrameTimestamp = timestamp
+            firstFrameTimestamp = timestamp
             firstFrame = false
         }
 
