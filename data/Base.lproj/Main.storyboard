@@ -76,7 +76,7 @@
                                     <constraint firstAttribute="height" constant="32" id="DNg-VJ-vMz"/>
                                 </constraints>
                             </view>
-                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="gDH-g4-grh">
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="gDH-g4-grh" userLabel="Files Button">
                                 <rect key="frame" x="744.5" y="1260" width="70" height="34"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="18"/>
                                 <state key="normal" title="Files"/>
@@ -86,7 +86,7 @@
                                     </segue>
                                 </connections>
                             </button>
-                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="nNI-d3-gAS">
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="nNI-d3-gAS" userLabel="About Button">
                                 <rect key="frame" x="974" y="1316" width="30" height="30"/>
                                 <constraints>
                                     <constraint firstAttribute="height" constant="30" id="Caw-GW-ULX"/>
@@ -138,7 +138,10 @@
                         </constraints>
                     </view>
                     <connections>
+                        <outlet property="aboutButton" destination="nNI-d3-gAS" id="GXH-LC-29Y"/>
                         <outlet property="arView" destination="psx-5e-zqb" id="I7x-u5-x8d"/>
+                        <outlet property="filesButton" destination="gDH-g4-grh" id="ign-QH-5VE"/>
+                        <outlet property="settingsButton" destination="XmA-9e-zF6" id="3Pa-d9-Obi"/>
                         <outlet property="timeLabel" destination="hbO-CQ-OYr" id="oSm-V7-V6w"/>
                         <outlet property="toggleButton" destination="mkg-Cg-J0r" id="0CB-NA-eTl"/>
                     </connections>

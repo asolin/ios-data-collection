@@ -7,9 +7,12 @@ protocol ViewControllerDelegate: class {
 
 @available(iOS 11.0, *)
 class ViewController: UIViewController {
-    @IBOutlet weak private var toggleButton: UIButton!
     @IBOutlet weak private var arView: ARSCNView!
     @IBOutlet weak private var timeLabel: UILabel!
+    @IBOutlet weak private var toggleButton: UIButton!
+    @IBOutlet weak private var settingsButton: UIButton!
+    @IBOutlet weak private var aboutButton: UIButton!
+    @IBOutlet weak private var filesButton: UIButton!
 
     private var updateTimer: DispatchSourceTimer!
     private var avCameraPreview: AVCaptureVideoPreviewLayer!
@@ -80,17 +83,21 @@ class ViewController: UIViewController {
     }
 
     @objc private func toggleCapture(_ sender: UITapGestureRecognizer) {
-        if (!captureControllerDelegate.capturing()) {
-            captureControllerDelegate.startCapture();
-            self.toggleButton.setTitle("Stop", for: .normal);
-            //animateButtonRadius(toValue: toggleButton.frame.height/10.0)
-            UIApplication.shared.isIdleTimerDisabled = true
+        if captureControllerDelegate.capturing() {
+            captureControllerDelegate.stopCapture()
+            self.toggleButton.setTitle("Start", for: .normal)
+            UIApplication.shared.isIdleTimerDisabled = false
+            settingsButton.isEnabled = true
+            filesButton.isEnabled = true
+            aboutButton.isEnabled = true
         }
         else {
-            captureControllerDelegate.stopCapture();
-            self.toggleButton.setTitle("Start", for: .normal)
-            //animateButtonRadius(toValue: toggleButton.frame.height/2.0)
-            UIApplication.shared.isIdleTimerDisabled = false
+            captureControllerDelegate.startCapture()
+            self.toggleButton.setTitle("Stop", for: .normal)
+            UIApplication.shared.isIdleTimerDisabled = true
+            settingsButton.isEnabled = false
+            filesButton.isEnabled = false
+            aboutButton.isEnabled = false
         }
     }
 

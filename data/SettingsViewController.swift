@@ -49,10 +49,15 @@ class SettingsViewController: UIViewController {
 
     @IBAction func cameraModeControlValueChanged(_ sender: UISegmentedControl) {
         UserDefaults.standard.set(cameraModeControl.selectedSegmentIndex, forKey: cameraModeKey)
-        let cameraMode = getCameraMode()
+
+        if captureControllerDelegate!.capturing() {
+            print("Attempted to change camera mode while capturing.")
+            return
+        }
 
         // Change camera mode on change of the setting (or exit from the settings view) so that the
         // camera preview view updates and that the start capture button won't stall to setup camera.
+        let cameraMode = getCameraMode()
         captureControllerDelegate.startCamera(cameraMode)
         viewControllerDelegate.updateCameraMode(cameraMode)
     }
@@ -61,6 +66,10 @@ class SettingsViewController: UIViewController {
 extension SettingsViewController: SettingsTableViewDelegate {
     func settingsTableViewCell(cell: SettingsTableViewCell, newSwitchValue: Bool, cellTag: String) {
         UserDefaults.standard.set(newSwitchValue, forKey: cellTag)
+
+        if captureControllerDelegate!.capturing() {
+            print("Changing switch while capturing.")
+        }
 
         // Coordinate switch changes.
         if cellTag == SettingsKeys.PointcloudEnableKey && newSwitchValue {
