@@ -47,11 +47,11 @@ class SettingsViewController: UIViewController {
     }
 
     @IBAction func cameraModeControlValueChanged(_ sender: UISegmentedControl) {
+        UserDefaults.standard.set(cameraModeControl.selectedSegmentIndex, forKey: cameraModeKey)
+
         // Change camera mode on change of the setting (or exit from the settings view) so that the
         // camera preview view updates and that the start capture button won't stall to setup camera.
         captureControllerDelegate.startCamera(getCameraMode())
-
-        UserDefaults.standard.set(cameraModeControl.selectedSegmentIndex, forKey: cameraModeKey)
     }
 }
 

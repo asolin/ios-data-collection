@@ -33,7 +33,8 @@ class CaptureController: NSObject {
     private var videoInput : AVAssetWriterInput?
 
     private var cameraMode: CameraMode!
-    private var captureSession = AVCaptureSession()
+    // ViewController assumes the captureSession remains valid.
+    private let captureSession = AVCaptureSession()
     private var cameraInput: AVCaptureDeviceInput?
     private var camera: AVCaptureDevice!
     private let preset = AVCaptureSession.Preset.hd1920x1080
@@ -133,9 +134,15 @@ class CaptureController: NSObject {
 
             //videoOutput.alwaysDiscardsLateVideoFrames = true
             videoOutput.setSampleBufferDelegate(self, queue: captureSessionQueue)
-            guard captureSession.canAddOutput(videoOutput) else { throw CameraControllerError.unknown }
+
+            let outputs = captureSession.outputs
+            for output in outputs {
+                captureSession.removeOutput(output)
+            }
+            guard captureSession.canAddOutput(videoOutput) else { throw CameraControllerError.cannotAddOutput }
             captureSession.addOutput(videoOutput)
-            guard let connection = videoOutput.connection(with: AVFoundation.AVMediaType.video) else { throw CameraControllerError.unknown }
+
+            guard let connection = videoOutput.connection(with: AVFoundation.AVMediaType.video) else { throw CameraControllerError.noConnection }
             if connection.isVideoOrientationSupported {
                 connection.videoOrientation = .portrait
             }
@@ -151,7 +158,7 @@ class CaptureController: NSObject {
             self.captureSession.startRunning()
         }
         catch {
-            print("\(error)")
+            print("StartAVCamera() error: \(error)")
         }
     }
 
@@ -214,8 +221,14 @@ extension CaptureController: CaptureControllerDelegate {
     }
 
     func startCamera(_ cameraMode: CameraMode) {
-        // Start either AV camera or ARKit session.
+        if self.cameraMode == cameraMode {
+            return
+        }
         self.cameraMode = cameraMode
+
+        captureSession.stopRunning()
+        arSession.pause()
+
         switch cameraMode {
         case .AV:
             startAVCamera()
@@ -564,7 +577,8 @@ extension float4x4 {
 private enum CameraControllerError: Swift.Error {
     case backCameraNotAvailable
     case unsupportedPreset
-    case unknown
+    case cannotAddOutput
+    case noConnection
 }
 
 enum CameraMode {

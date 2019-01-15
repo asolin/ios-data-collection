@@ -21,6 +21,7 @@ class ViewController: UIViewController {
         // On the UI thread for now.
         captureControllerDelegate.startCamera(getCameraMode())
 
+        // Assume the AVCaptureSession reference remains valid.
         let avCaptureSession = captureControllerDelegate.getAVCaptureSession()
         avCameraPreview = AVCaptureVideoPreviewLayer(session: avCaptureSession)
 
@@ -91,13 +92,21 @@ class ViewController: UIViewController {
     private func setUpdateTimer() {
         updateTimer?.cancel()
         updateTimer = DispatchSource.makeTimerSource(queue: DispatchQueue.main)
-        updateTimer.schedule(deadline: .now(), repeating: .milliseconds(100), leeway: .milliseconds(10))
+        updateTimer.schedule(deadline: .now(), repeating: .milliseconds(500), leeway: .milliseconds(10))
         updateTimer.setEventHandler { [weak self] in
             if let recTime = self?.captureControllerDelegate.getRecTime() {
                 self?.timeLabel.text = String(format: "Rec time: %.02f s", recTime)
             }
             else {
                 self?.timeLabel.text = ""
+            }
+
+            // Hack.
+            if getCameraMode() == CameraMode.AV {
+                self?.avCameraPreview.isHidden = false
+            }
+            else {
+                self?.avCameraPreview.isHidden = true
             }
         }
         updateTimer.resume()
