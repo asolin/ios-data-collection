@@ -37,10 +37,7 @@ class CaptureController: NSObject {
     private let captureSession = AVCaptureSession()
     private var cameraInput: AVCaptureDeviceInput?
     private var camera: AVCaptureDevice!
-    private let preset = AVCaptureSession.Preset.hd1920x1080
-    // private let preset = AVCaptureSession.Preset.hd1280x720
-    // private let preset = AVCaptureSession.Preset.low
-    private let fps: Int32 = 60
+    private let preset = AVCaptureSession.Preset.high
 
     private var isCapturing : Bool = false
     private var outputStream : OutputStream!
@@ -73,9 +70,13 @@ class CaptureController: NSObject {
                 throw CameraControllerError.unsupportedPreset
             }
 
-            // Use the device type with shortest focal length.
-            let deviceType = AVCaptureDevice.DeviceType.builtInWideAngleCamera
-            let session = AVCaptureDevice.DiscoverySession(deviceTypes: [deviceType], mediaType: AVMediaType.video, position: .back)
+            // Use WideAngle, the device type with shortest focal length. The rest are fallbacks.
+            let deviceTypes = [
+                AVCaptureDevice.DeviceType.builtInWideAngleCamera,
+                AVCaptureDevice.DeviceType.builtInDualCamera,
+                AVCaptureDevice.DeviceType.builtInTelephotoCamera,
+                ]
+            let session = AVCaptureDevice.DiscoverySession(deviceTypes: deviceTypes, mediaType: AVMediaType.video, position: .back)
 
             let cameras = session.devices.compactMap { $0 }
             guard let camera = cameras.first else { throw CameraControllerError.backCameraNotAvailable }
@@ -88,20 +89,25 @@ class CaptureController: NSObject {
             try camera.lockForConfiguration()
 
             // Lock focus to the maximum value 1.0.
+            /*
             if camera.isLockingFocusWithCustomLensPositionSupported {
                 camera.setFocusModeLocked(lensPosition: 1.0, completionHandler: nil)
             }
+            */
 
-            // Default on my testing iPhone X is duration CMTimeMake(1, 50) and
-            // continuously automatically adjusting iso value. It doesn't seem
-            // possible to fix duration to custom value while letting the iso vary.
+            // Example of setting exposure.
+            /*
             if camera.isExposureModeSupported(AVCaptureDevice.ExposureMode.custom) {
                 camera.setExposureModeCustom(duration: CMTimeMake(value: 1, timescale: 100), iso: Float(400), completionHandler: nil)
             }
+            */
 
             // According to Apple docs changing exposure can change frame duration settings, so set fps last.
             let r = camera.activeFormat.videoSupportedFrameRateRanges.first!
-            var frameDur = CMTimeMake(value: 1, timescale: fps)
+            // TODO Using ARKit seems to give better FPS than this. Investigate?
+            var frameDur = r.minFrameDuration
+            // var frameDur = CMTimeMake(value: 1, timescale: 60)
+
             if frameDur > r.maxFrameDuration { frameDur = r.maxFrameDuration }
             if frameDur < r.minFrameDuration { frameDur = r.minFrameDuration }
             camera.activeVideoMinFrameDuration = frameDur
