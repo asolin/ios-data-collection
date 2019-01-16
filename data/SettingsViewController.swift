@@ -12,6 +12,8 @@ class SettingsViewController: UIViewController {
 
     weak var captureControllerDelegate: CaptureControllerDelegate!
     weak var viewControllerDelegate: ViewControllerDelegate!
+    var captureSessionQueue: DispatchQueue!
+
     private var cellList : [SettingsTableViewCell] = []
 
     override func viewDidLoad() {
@@ -60,8 +62,10 @@ class SettingsViewController: UIViewController {
         // Change camera mode on change of the setting (or exit from the settings view) so that the
         // camera preview view updates and that the start capture button won't stall to setup camera.
         let cameraMode = getCameraMode()
-        captureControllerDelegate.startCamera(cameraMode)
         viewControllerDelegate.updateCameraMode(cameraMode)
+        captureSessionQueue.async {
+            self.captureControllerDelegate.startCamera(cameraMode)
+        }
     }
 }
 

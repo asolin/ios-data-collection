@@ -18,6 +18,7 @@ class ViewController: UIViewController {
     private var avCameraPreview: AVCaptureVideoPreviewLayer!
 
     weak var captureControllerDelegate: CaptureControllerDelegate!
+    var captureSessionQueue: DispatchQueue!
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -25,10 +26,12 @@ class ViewController: UIViewController {
         captureControllerDelegate.setARSession(arView.session)
         arView.delegate = self
 
-        // On the UI thread for now.
-        captureControllerDelegate.startCamera(getCameraMode())
+        captureSessionQueue.async {
+            self.captureControllerDelegate.startCamera(getCameraMode())
+        }
 
-        // Assume the AVCaptureSession reference remains valid.
+        // Assume the AVCaptureSession reference is valid before startCamera() completes and
+        // remains valid for the duration of the program run.
         let avCaptureSession = captureControllerDelegate.getAVCaptureSession()
         avCameraPreview = AVCaptureVideoPreviewLayer(session: avCaptureSession)
 
@@ -52,6 +55,7 @@ class ViewController: UIViewController {
         if let settingsViewController = segue.destination as? SettingsViewController {
             settingsViewController.viewControllerDelegate = self
             settingsViewController.captureControllerDelegate = captureControllerDelegate
+            settingsViewController.captureSessionQueue = captureSessionQueue
         }
     }
 
@@ -100,7 +104,9 @@ class ViewController: UIViewController {
                 }
             }
 
-            captureControllerDelegate.stopCapture()
+            captureSessionQueue.async {
+                self.captureControllerDelegate.stopCapture()
+            }
             self.toggleButton.setTitle("Start", for: .normal)
             UIApplication.shared.isIdleTimerDisabled = false
             settingsButton.isEnabled = true
@@ -108,7 +114,9 @@ class ViewController: UIViewController {
             aboutButton.isEnabled = true
         }
         else {
-            captureControllerDelegate.startCapture()
+            captureSessionQueue.async {
+                self.captureControllerDelegate.startCapture()
+            }
             self.toggleButton.setTitle("Stop", for: .normal)
             UIApplication.shared.isIdleTimerDisabled = true
             settingsButton.isEnabled = false

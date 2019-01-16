@@ -23,7 +23,7 @@ class CaptureController: NSObject {
     private let altimeter = CMAltimeter()
     private var locationManager = CLLocationManager()
 
-    private let captureSessionQueue: DispatchQueue = DispatchQueue(label: "captureSession", attributes: [])
+    private var captureSessionQueue: DispatchQueue!
     private var opQueue: OperationQueue!
 
     // Camera and video.
@@ -51,7 +51,8 @@ class CaptureController: NSObject {
     private var frameCount = 0
     private var firstFrame: Bool = true
 
-    func start() {
+    func start(_ captureSessionQueue: DispatchQueue) {
+        self.captureSessionQueue = captureSessionQueue
         opQueue = OperationQueue()
         opQueue.underlyingQueue = captureSessionQueue
 
@@ -328,17 +329,14 @@ extension CaptureController: CaptureControllerDelegate {
         captureStartTimestamp = Optional.none
 
         // Stop video capture.
-        // Use the captureSession queue in case writing and stopping the writer could interfere.
-        captureSessionQueue.async {
-            if self.assetWriter?.status != AVAssetWriter.Status.writing {
-                print("Expected assetWriter to be writing.")
-                return
-            }
-            self.assetWriter?.finishWriting(completionHandler: {
-                // Move video file after assetWriter is finished.
-                moveDataFileToDocuments(self.assetWriter!.outputURL)
-            })
+        if self.assetWriter?.status != AVAssetWriter.Status.writing {
+            print("Expected assetWriter to be writing.")
+            return
         }
+        self.assetWriter?.finishWriting(completionHandler: {
+            // Move video file after assetWriter is finished.
+            moveDataFileToDocuments(self.assetWriter!.outputURL)
+        })
 
         // Stop other sensor capture.
         if (motionManager.isAccelerometerActive) {motionManager.stopAccelerometerUpdates(); }

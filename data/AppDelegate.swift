@@ -4,18 +4,20 @@ import UIKit
 class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
+    private let captureSessionQueue: DispatchQueue = DispatchQueue(label: "captureSession", attributes: [])
     private var captureController = CaptureController()
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Link controllers together.
         if let viewController = window?.rootViewController as? ViewController {
             viewController.captureControllerDelegate = captureController
+            viewController.captureSessionQueue = captureSessionQueue
         }
         else {
             print("Failed to setup controller delegates.")
         }
 
-        captureController.start()
+        captureController.start(captureSessionQueue)
 
         return true
     }
