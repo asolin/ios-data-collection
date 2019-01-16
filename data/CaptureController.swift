@@ -523,6 +523,18 @@ extension CaptureController: AVCaptureVideoDataOutputSampleBufferDelegate {
             print("captureOutput(): videoInput not ready.")
         }
 
+        // Append frame data to csv.
+        let str = NSString(format: "%f,%d,%d\n",
+            CMTimeGetSeconds(timestamp),
+            CAMERA_ID,
+            self.frameCount
+            )
+        if self.outputStream.write(str as String) < 0 {
+            print("Failure writing camera frame to output csv.")
+        }
+
+        self.frameCount = self.frameCount + 1
+
         // Camera intrinsic matrix (focal lengths and principal point).
         // <https://stackoverflow.com/a/48159895>
         /*
