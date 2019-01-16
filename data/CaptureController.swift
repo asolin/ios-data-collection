@@ -262,8 +262,9 @@ extension CaptureController: CaptureControllerDelegate {
         // Filename from date.
         let date = Date()
         let formatter = DateFormatter()
+        // The filename will be unique if two recordings cannot start on the same second.
         formatter.dateFormat = "yyyy-MM-dd-HH-mm-ss"
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        // formatter.timeZone = TimeZone(secondsFromGMT: 0)
         filename = "data-" + formatter.string(from: date)
 
         // Setup sensor data csv.
