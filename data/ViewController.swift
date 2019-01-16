@@ -37,6 +37,14 @@ class ViewController: UIViewController {
         tap.numberOfTapsRequired = 1
         toggleButton.addGestureRecognizer(tap);
 
+        // Put a shadow under record time label.
+        timeLabel.layer.shadowOffset = CGSize.zero
+        timeLabel.layer.masksToBounds = false
+        timeLabel.layer.shadowColor = UIColor.white.cgColor
+        timeLabel.layer.shadowRadius = 1.0
+        timeLabel.layer.shadowOpacity = 1.0
+        timeLabel.layer.shouldRasterize = true
+
         setUpdateTimer()
     }
 
