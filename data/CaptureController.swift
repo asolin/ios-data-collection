@@ -39,15 +39,17 @@ class CaptureController: NSObject {
     private var camera: AVCaptureDevice!
     private let preset = AVCaptureSession.Preset.high
 
-    private var isCapturing : Bool = false
-    private var outputStream : OutputStream!
-    //private var pointcloudStream : OutputStream!
-    private var filename : String = ""
-    private var filePath : NSURL!
-    private var frameCount = 0
-    private var firstFrame : Bool = true
+    // Files.
+    private var baseFilename: String = ""
+    private var sensorURL: URL!
+    private var pointCloudURL: URL!
+    private var sensorOutputStream: OutputStream!
+    private var pointCloudOutputStream: OutputStream!
 
+    private var isCapturing : Bool = false
     private var captureStartTimestamp: Optional<TimeInterval> = Optional.none
+    private var frameCount = 0
+    private var firstFrame: Bool = true
 
     func start() {
         opQueue = OperationQueue()
@@ -168,11 +170,11 @@ class CaptureController: NSObject {
     }
 
     private func setupAssetWriter(_ pixelBuffer: CVPixelBuffer, _ timestamp: CMTime) {
-        let videoPath = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(filename).appendingPathExtension("mov")
+        let videoURL = dataPath(baseFilename, Storage.temporary, "mov")
         do {
-            assetWriter = try AVAssetWriter(outputURL: videoPath, fileType: AVFileType.mov )
+            assetWriter = try AVAssetWriter(outputURL: videoURL, fileType: AVFileType.mov)
         } catch {
-            print("Error converting images to video: asset initialization error")
+            print("Failed to initialize AVAssetWriter")
             return
         }
 
@@ -265,28 +267,17 @@ extension CaptureController: CaptureControllerDelegate {
         // The filename will be unique if two recordings cannot start on the same second.
         formatter.dateFormat = "yyyy-MM-dd-HH-mm-ss"
         // formatter.timeZone = TimeZone(secondsFromGMT: 0)
-        filename = "data-" + formatter.string(from: date)
+        baseFilename = "data-" + formatter.string(from: date)
 
-        // Setup sensor data csv.
-        filePath = NSURL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(filename)!.appendingPathExtension("csv") as NSURL
-        outputStream = OutputStream(url: filePath as URL, append: false)
-        if outputStream != nil {
-            outputStream.open()
-        } else {
-            print("Unable to open csv output file.")
-            return
+        // Open text output files.
+        sensorURL = dataPath(baseFilename, Storage.temporary, "csv")
+        sensorOutputStream = OutputStream(url: sensorURL, append: false)
+        sensorOutputStream!.open()
+        if UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey) {
+            pointCloudURL = dataPath(baseFilename + "-pcl", Storage.temporary, "csv")
+            pointCloudOutputStream = OutputStream(url: pointCloudURL, append: false)
+            pointCloudOutputStream!.open()
         }
-
-        /*
-        filePath = NSURL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(filename)!.appendingPathExtension("pcl") as NSURL
-            pointcloudStream = OutputStream(url: filePath as URL, append: false)
-        if pointcloudStream != nil {
-            pointcloudStream.open()
-        } else {
-            print("Unable to open pointcloud output file.")
-                return
-        }
-        */
 
         // Store start time.
         let str = NSString(format:"%f,%d,%f,%f\n",
@@ -294,23 +285,23 @@ extension CaptureController: CaptureControllerDelegate {
             TIMESTAMP_ID,
             Date().timeIntervalSince1970,
             Clock.now?.timeIntervalSince1970 ?? 0)
-        if self.outputStream.write(str as String) < 0 {
+        if sensorOutputStream.write(str as String) < 0 {
             print("Failure writing timestamp to output csv.")
         }
         captureStartTimestamp = Optional.some(ProcessInfo.processInfo.systemUptime)
 
         // Setup data acquisition.
         if UserDefaults.standard.bool(forKey: SettingsKeys.AccEnableKey) {
-            runAccDataAcquisition(motionManager, opQueue, outputStream)
+            runAccDataAcquisition(motionManager, opQueue, sensorOutputStream)
         }
         if UserDefaults.standard.bool(forKey: SettingsKeys.GyroEnableKey) {
-            runGyroDataAcquisition(motionManager, opQueue, outputStream)
+            runGyroDataAcquisition(motionManager, opQueue, sensorOutputStream)
         }
         if UserDefaults.standard.bool(forKey: SettingsKeys.MagnetEnableKey) {
-            runMagnetometerDataAcquisition(motionManager, opQueue, outputStream)
+            runMagnetometerDataAcquisition(motionManager, opQueue, sensorOutputStream)
         }
         if UserDefaults.standard.bool(forKey: SettingsKeys.BarometerEnableKey) {
-            runBarometerDataAcquisition(altimeter, opQueue, outputStream)
+            runBarometerDataAcquisition(altimeter, opQueue, sensorOutputStream)
         }
         runLocation()
 
@@ -339,25 +330,14 @@ extension CaptureController: CaptureControllerDelegate {
         // Stop video capture.
         // Use the captureSession queue in case writing and stopping the writer could interfere.
         captureSessionQueue.async {
-            if let assetWriter = self.assetWriter {
-                if assetWriter.status != AVAssetWriter.Status.writing {
-                    print("Expected assetWriter to be writing.")
-                    return
-                }
-                assetWriter.finishWriting(completionHandler: {
-                    // Move video file after assetWriter is finished.
-                    let documentsPath = try! FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-                    let fileManager = FileManager.default
-                    if UserDefaults.standard.bool(forKey: SettingsKeys.VideoARKitEnableKey) {
-                        let destinationVideoPath = NSURL(fileURLWithPath: documentsPath.absoluteString).appendingPathComponent(self.filename)?.appendingPathExtension("mov")
-                        do {
-                            try fileManager.moveItem(at: assetWriter.outputURL, to: destinationVideoPath!)
-                        } catch let error as NSError {
-                            print("Error occurred while moving video file:\n \(error)")
-                        }
-                    }
-                })
+            if self.assetWriter?.status != AVAssetWriter.Status.writing {
+                print("Expected assetWriter to be writing.")
+                return
             }
+            self.assetWriter?.finishWriting(completionHandler: {
+                // Move video file after assetWriter is finished.
+                moveDataFileToDocuments(self.assetWriter!.outputURL)
+            })
         }
 
         // Stop other sensor capture.
@@ -367,29 +347,14 @@ extension CaptureController: CaptureControllerDelegate {
         altimeter.stopRelativeAltitudeUpdates();
         locationManager.stopUpdatingLocation()
 
-        outputStream.close()
-        //pointcloudStream.close()
-
-        // Move data files.
-        let documentsPath = try! FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-        let fileManager = FileManager.default
-        let destinationPath = NSURL(fileURLWithPath: documentsPath.absoluteString).appendingPathComponent(filename)?.appendingPathExtension("csv")
-        do {
-            try fileManager.moveItem(at: filePath as URL, to: destinationPath!)
-        } catch let error as NSError {
-            print("Error occurred while moving data file:\n \(error)")
+        // Handle data files.
+        sensorOutputStream.close()
+        moveDataFileToDocuments(sensorURL)
+        if UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey) {
+            pointCloudOutputStream.close()
+            moveDataFileToDocuments(pointCloudURL)
         }
 
-        /*
-        if (UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey)) {
-            let pclDestinationFile = NSURL(fileURLWithPath: documentsPath.absoluteString).appendingPathComponent(filename)?.appendingPathExtension("pcl")
-            do {
-                try fileManager.moveItem(at: filePath as URL, to: pclDestinationFile!)
-            } catch let error as NSError {
-                print("Error occurred while moving pointcloud file:\n \(error)")
-            }
-        }
-        */
         print("Recording stopped.")
     }
 }
@@ -416,20 +381,17 @@ extension CaptureController: ARSessionDelegate {
             firstFrame = false
         }
 
-        if (UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey)) {
+        if UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey) {
             // Append ARKit point cloud to csv.
             if let featurePointsArray = frame.rawFeaturePoints?.points {
-                var pstr = NSString(format:"%f,%d,%d",
-                                    frame.timestamp,
-                                    POINTCLOUD_ID,
-                                    self.frameCount)
+                var pstr = NSString(format:"%f,%d", frame.timestamp, self.frameCount)
                 for point in featurePointsArray {
                     pstr = NSString(format:"%@,%f,%f,%f",
                                     pstr,
                                     point.x, point.y, point.z)
                 }
                 pstr = NSString(format:"%@\n", pstr)
-                if self.outputStream.write(pstr as String) < 0 {
+                if pointCloudOutputStream.write(pstr as String) < 0 {
                     print("Failure writing ARKit point cloud.")
                 }
             }
@@ -455,7 +417,7 @@ extension CaptureController: ARSessionDelegate {
                 transform[0][0],transform[1][0],transform[2][0],
                 transform[0][1],transform[1][1],transform[2][1],
                 transform[0][2],transform[1][2],transform[2][2])
-            if self.outputStream.write(str as String) < 0 {
+            if sensorOutputStream.write(str as String) < 0 {
                 print("Failure writing ARKit to output csv.")
                 }
 
@@ -484,7 +446,7 @@ extension CaptureController: CLLocationManagerDelegate {
                 loc.altitude,
                 loc.verticalAccuracy,
                 loc.speed)
-            if self.outputStream.write(str as String) < 0 {
+            if sensorOutputStream.write(str as String) < 0 {
                 print("Failure writing location to output csv.")
             }
         }
@@ -520,7 +482,7 @@ extension CaptureController: AVCaptureVideoDataOutputSampleBufferDelegate {
             CAMERA_ID,
             self.frameCount
             )
-        if self.outputStream.write(str as String) < 0 {
+        if sensorOutputStream.write(str as String) < 0 {
             print("Failure writing camera frame to output csv.")
         }
 
@@ -581,6 +543,31 @@ extension float4x4 {
     }
 }
 
+// The temporary paths might change between calls so store the results that need to be reused.
+func dataPath(_ base: String, _ storage: Storage, _ ext: String) -> URL {
+    let documentsPath = try! FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+    var path: String
+    switch storage {
+    case .temporary:
+        path = NSTemporaryDirectory()
+    case .documents:
+        path = documentsPath.absoluteString
+    }
+    return NSURL(fileURLWithPath: path).appendingPathComponent(base)!.appendingPathExtension(ext)
+}
+
+func moveDataFileToDocuments(_ source: URL) {
+    let component = source.lastPathComponent
+    let documentsPath = try! FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+    let destination = NSURL(fileURLWithPath: documentsPath.absoluteString).appendingPathComponent(component)!
+    do {
+        try FileManager.default.moveItem(at: source, to: destination)
+    }
+    catch let error as NSError {
+        print("Error occurred while moving data file:\n\(error)")
+    }
+}
+
 private enum CameraControllerError: Swift.Error {
     case backCameraNotAvailable
     case unsupportedPreset
@@ -591,4 +578,9 @@ private enum CameraControllerError: Swift.Error {
 enum CameraMode {
     case AV
     case ARKit
+}
+
+enum Storage {
+    case temporary
+    case documents
 }
