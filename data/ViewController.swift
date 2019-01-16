@@ -106,8 +106,9 @@ class ViewController: UIViewController {
         updateTimer = DispatchSource.makeTimerSource(queue: DispatchQueue.main)
         updateTimer.schedule(deadline: .now(), repeating: .milliseconds(50), leeway: .milliseconds(10))
         updateTimer.setEventHandler { [weak self] in
-            if let recTime = self?.captureControllerDelegate.getRecTime() {
-                self?.timeLabel.text = String(format: "Rec time: %.01f s", CMTimeGetSeconds(recTime))
+            if let captureStartTimestamp = self?.captureControllerDelegate.getCaptureStartTimestamp() {
+                let timestamp = ProcessInfo.processInfo.systemUptime
+                self?.timeLabel.text = String(format: "Rec time: %.01f s", timestamp - captureStartTimestamp)
             }
             else {
                 self?.timeLabel.text = ""
