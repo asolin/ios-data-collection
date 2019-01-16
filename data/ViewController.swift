@@ -84,6 +84,14 @@ class ViewController: UIViewController {
 
     @objc private func toggleCapture(_ sender: UITapGestureRecognizer) {
         if captureControllerDelegate.capturing() {
+            // Do not allow captures shorter than one second, so that two capture sessions cannot start
+            // on the same second which would give them identical filenames and cause errors.
+            if let captureStartTimestamp = self.captureControllerDelegate.getCaptureStartTimestamp() {
+                if (ProcessInfo.processInfo.systemUptime - captureStartTimestamp) < 1.1 {
+                    return
+                }
+            }
+
             captureControllerDelegate.stopCapture()
             self.toggleButton.setTitle("Start", for: .normal)
             UIApplication.shared.isIdleTimerDisabled = false
