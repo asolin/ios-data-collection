@@ -14,10 +14,6 @@ class FilesViewController: UIViewController, UITableViewDataSource, UITableViewD
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "myCell")
     }
 
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-    }
-
     private func listFilesFromDocumentsFolder() -> [String]? {
         let fileMngr = FileManager.default;
         let docs = fileMngr.urls(for: .documentDirectory, in: .userDomainMask)[0].path

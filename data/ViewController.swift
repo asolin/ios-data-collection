@@ -41,6 +41,7 @@ class ViewController: UIViewController {
         arView.layer.addSublayer(avCameraPreview)
 
         // Put a shadow under record time label.
+        timeLabel.text = ""
         timeLabel.layer.shadowOffset = CGSize.zero
         timeLabel.layer.masksToBounds = false
         timeLabel.layer.shadowColor = UIColor.white.cgColor
@@ -66,20 +67,12 @@ class ViewController: UIViewController {
         }
     }
 
-    override func viewWillAppear(_ animated: Bool) {
-        timeLabel.text = ""
-    }
-
     // Note that the recurring recording time text change causes this to be called each time.
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
 
         // Seems necessary to keep the AV Camera preview correctly sized.
         avCameraPreview.frame = arView.bounds
-    }
-
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
     }
 
     @IBAction func pressToggleButton(_ sender: UIButton) {
