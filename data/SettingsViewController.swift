@@ -40,14 +40,19 @@ class SettingsViewController: UIViewController {
         return UserDefaults.standard.object(forKey: key) != nil
     }
 
-    private func setupSwitchWithUserDefaultsValue(button: UISwitch, key: String) {
+    private func setupSettingsSwitch(settingsSwitch: UISwitch, key: String) {
         if isKeyInUserDefaults(key: key) {
             let isEnabled = UserDefaults.standard.bool(forKey: key)
-            button.setOn(isEnabled, animated: false)
+            settingsSwitch.setOn(isEnabled, animated: false)
         }
         else {
             UserDefaults.standard.set(true, forKey: key)
-            button.setOn(true, animated: false)
+            settingsSwitch.setOn(true, animated: false)
+        }
+
+        if key == SettingsKeys.PointcloudEnableKey {
+            let cameraMode = getCameraMode()
+            settingsSwitch.isEnabled = cameraMode == CameraMode.ARKit
         }
     }
 
@@ -63,6 +68,13 @@ class SettingsViewController: UIViewController {
         // camera preview view updates and that the start capture button won't stall to setup camera.
         let cameraMode = getCameraMode()
         viewControllerDelegate.updateCameraMode(cameraMode)
+        for cell in cellList {
+            if cell.cellTag == SettingsKeys.PointcloudEnableKey {
+                cell.settingsSwitch.isEnabled = cameraMode == CameraMode.ARKit
+                break
+            }
+        }
+
         captureSessionQueue.async {
             self.captureControllerDelegate.startCamera(cameraMode)
         }
@@ -92,7 +104,7 @@ extension SettingsViewController: UITableViewDataSource {
             cell.descriptionLabel.text = SettingsDescriptions.descriptions[key]
             cell.delegate = self
 
-            setupSwitchWithUserDefaultsValue(button: cell.settingsSwitch, key: key)
+            setupSettingsSwitch(settingsSwitch: cell.settingsSwitch, key: key)
         }
         else {
             print("Error: unexpected index path for settings table cell! \(indexPath.item)")
