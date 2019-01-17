@@ -25,28 +25,28 @@ class SettingsCellTitles {
 class SettingsDescriptions {
     static let descriptions : [String : String] = [
         SettingsKeys.GyroEnableKey: """
-            (x, y, z) [rad/s]
-            id: 4, file: .csv
+            (t, 4, x, y, z) [rad/s]
+            file: .csv
             """,
         SettingsKeys.AccEnableKey: """
-            (x, y, z) [m/s^2]
-            id: 3, file: .csv
+            (t, 3, x, y, z) [m/s^2]
+            file: .csv
             """,
         SettingsKeys.MagnetEnableKey: """
-            (x, y, z)
-            id: 5, file: .csv
+            (t, 5, x, y, z)
+            file: .csv
             """,
         SettingsKeys.BarometerEnableKey: """
-            (pressure, rel. alt.) [kPa, m]
-            id: 6, file: .csv
+            (t, 6, pressure, rel. alt.) [kPa, m]
+            file: .csv
             """,
         SettingsKeys.LocationEnableKey: """
-            (lat, lon, prec., alt, prec., speed)
-            id: 2, file: .csv
+            (t, 2, lat, lon, prec., alt, prec., speed)
+            file: .csv
             """,
         SettingsKeys.PointcloudEnableKey: """
-            Only in ARKit mode
-            id: 8, file: -pcl.csv
+            (t, frame num, (x, y, z,)+)
+            file: -pcl.csv, only in ARKit mode
             """,
     ]
 }
