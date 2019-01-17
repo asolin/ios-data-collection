@@ -377,17 +377,16 @@ extension CaptureController: ARSessionDelegate {
 
         if UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey) {
             // Append ARKit point cloud to csv.
-            if let featurePointsArray = frame.rawFeaturePoints?.points {
-                var pstr = NSString(format:"%f,%d", frame.timestamp, self.frameCount)
-                for point in featurePointsArray {
-                    pstr = NSString(format:"%@,%f,%f,%f",
-                                    pstr,
-                                    point.x, point.y, point.z)
+            var ok = true;
+            if let points = frame.rawFeaturePoints?.points {
+                if pointCloudOutputStream.write(String(format: "%f,%d", frame.timestamp, self.frameCount)) < 0 { ok = false }
+                for point in points {
+                    if pointCloudOutputStream.write(String(format: ",%f,%f,%f", point.x, point.y, point.z)) < 0 { ok = false }
                 }
-                pstr = NSString(format:"%@\n", pstr)
-                if pointCloudOutputStream.write(pstr as String) < 0 {
-                    print("Failure writing ARKit point cloud.")
-                }
+                if pointCloudOutputStream.write("\n") < 0 { ok = false }
+            }
+            if !ok {
+                print("Failure writing ARKit point cloud.")
             }
         }
 
