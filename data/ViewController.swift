@@ -35,11 +35,6 @@ class ViewController: UIViewController {
         let avCaptureSession = captureControllerDelegate.getAVCaptureSession()
         avCameraPreview = AVCaptureVideoPreviewLayer(session: avCaptureSession)
 
-        // Tap gesture for start/stop.
-        let tap = UITapGestureRecognizer(target: self, action: #selector(self.toggleCapture(_:)))
-        tap.numberOfTapsRequired = 1
-        toggleButton.addGestureRecognizer(tap);
-
         // Put a shadow under record time label.
         timeLabel.layer.shadowOffset = CGSize.zero
         timeLabel.layer.masksToBounds = false
@@ -94,7 +89,7 @@ class ViewController: UIViewController {
         super.didReceiveMemoryWarning()
     }
 
-    @objc private func toggleCapture(_ sender: UITapGestureRecognizer) {
+    @IBAction func pressToggleButton(_ sender: UIButton) {
         if captureControllerDelegate.capturing() {
             // Do not allow captures shorter than one second, so that two capture sessions cannot start
             // on the same second which would give them identical filenames and cause errors.
