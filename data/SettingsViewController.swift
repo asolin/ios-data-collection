@@ -76,24 +76,6 @@ extension SettingsViewController: SettingsTableViewDelegate {
         if captureControllerDelegate!.capturing() {
             print("Changing switch while capturing.")
         }
-
-        // Coordinate switch changes.
-        if cellTag == SettingsKeys.PointcloudEnableKey && newSwitchValue {
-            UserDefaults.standard.set(true, forKey: SettingsKeys.VideoARKitEnableKey)
-            for cell in cellList {
-                if cell.cellTag == SettingsKeys.VideoARKitEnableKey {
-                    cell.settingsSwitch.setOn(true, animated: true)
-                }
-            }
-        }
-        else if cellTag == SettingsKeys.VideoARKitEnableKey && !newSwitchValue {
-            UserDefaults.standard.set(false, forKey: SettingsKeys.PointcloudEnableKey)
-            for cell in cellList {
-                if cell.cellTag == SettingsKeys.PointcloudEnableKey {
-                    cell.settingsSwitch.setOn(false, animated: true)
-                }
-            }
-        }
     }
 }
 

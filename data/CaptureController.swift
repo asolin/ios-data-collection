@@ -360,10 +360,6 @@ extension CaptureController: CaptureControllerDelegate {
 extension CaptureController: ARSessionDelegate {
     @available(iOS 11.0, *)
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
-        if !UserDefaults.standard.bool(forKey: SettingsKeys.VideoARKitEnableKey) {
-            return
-        }
-
         if !isCapturing {
             return
         }
