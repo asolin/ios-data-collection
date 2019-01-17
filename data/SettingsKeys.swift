@@ -17,18 +17,36 @@ class SettingsCellTitles {
         SettingsKeys.AccEnableKey : "Accelerometer",
         SettingsKeys.MagnetEnableKey : "Magnetometer",
         SettingsKeys.BarometerEnableKey : "Barometer",
-        SettingsKeys.LocationEnableKey : "Location",
+        SettingsKeys.LocationEnableKey : "GPS Location",
         SettingsKeys.PointcloudEnableKey : "ARKit point cloud"
     ]
 }
 
 class SettingsDescriptions {
     static let descriptions : [String : String] = [
-        SettingsKeys.GyroEnableKey : "Data from iphone's gyroscope (x,y,z) [rad/s]\nID: 4, file: .csv",
-        SettingsKeys.AccEnableKey : "Data from iphone's accelerometer (x,y,z) [m/s^2]\nID:3: file: .csv",
-        SettingsKeys.MagnetEnableKey : "Data from iphone's magnetometer (x,y,z)\nID:5: file: .csv",
-        SettingsKeys.BarometerEnableKey : "Barometer's data (pressure, rel. alt.) [kPa, m]\nID:6 file: .csv",
-        SettingsKeys.LocationEnableKey : "GPS location (lat, lon, prec., alt, prec., speed)\nID:2 file: .csv",
-        SettingsKeys.PointcloudEnableKey : "ARKit's pointcloud log, ARKit must be activated\nID: 8, file: .pcl"
+        SettingsKeys.GyroEnableKey: """
+            (x, y, z) [rad/s]
+            id: 4, file: .csv
+            """,
+        SettingsKeys.AccEnableKey: """
+            (x, y, z) [m/s^2]
+            id: 3, file: .csv
+            """,
+        SettingsKeys.MagnetEnableKey: """
+            (x, y, z)
+            id: 5, file: .csv
+            """,
+        SettingsKeys.BarometerEnableKey: """
+            (pressure, rel. alt.) [kPa, m]
+            id: 6, file: .csv
+            """,
+        SettingsKeys.LocationEnableKey: """
+            (lat, lon, prec., alt, prec., speed)
+            id: 2, file: .csv
+            """,
+        SettingsKeys.PointcloudEnableKey: """
+            Only in ARKit mode
+            id: 8, file: -pcl.csv
+            """,
     ]
 }
