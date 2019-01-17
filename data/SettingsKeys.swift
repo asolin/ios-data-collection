@@ -45,7 +45,7 @@ class SettingsDescriptions {
             file: .csv
             """,
         SettingsKeys.PointcloudEnableKey: """
-            (t, frame num, (x, y, z,)+)
+            (t, frame num, (id, x, y, z,)+)
             file: -pcl.csv, only in ARKit mode
             """,
     ]
