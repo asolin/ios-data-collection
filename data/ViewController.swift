@@ -39,6 +39,7 @@ class ViewController: UIViewController {
         // Use resizeAspectFill instead of resizeAspect for both AV and ARKit camera previews.
         avCameraPreview.videoGravity = AVLayerVideoGravity.resizeAspectFill
         arView.layer.addSublayer(avCameraPreview)
+        arView.debugOptions = [.showFeaturePoints, .showWorldOrigin]
 
         // Put a shadow under record time label.
         timeLabel.text = ""
