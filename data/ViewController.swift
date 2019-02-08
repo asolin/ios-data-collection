@@ -1,72 +1,123 @@
 import ARKit
 import UIKit
 
+protocol ViewControllerDelegate: class {
+    func updateCameraMode(_ cameraMode: CameraMode)
+}
+
 @available(iOS 11.0, *)
 class ViewController: UIViewController {
-    /* Outlets */
-    @IBOutlet weak private var toggleButton: UIButton!
     @IBOutlet weak private var arView: ARSCNView!
     @IBOutlet weak private var timeLabel: UILabel!
+    @IBOutlet weak private var toggleButton: UIButton!
+    @IBOutlet weak private var settingsButton: UIButton!
+    @IBOutlet weak private var aboutButton: UIButton!
+    @IBOutlet weak private var filesButton: UIButton!
 
     private var updateTimer: DispatchSourceTimer!
+    private var avCameraPreview: AVCaptureVideoPreviewLayer!
 
-    var captureControllerDelegate: CaptureControllerDelegate!
+    weak var captureControllerDelegate: CaptureControllerDelegate!
+    var captureSessionQueue: DispatchQueue!
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        arView.delegate = self
         captureControllerDelegate.setARSession(arView.session)
+        arView.delegate = self
 
-        // Tap gesture for start/stop.
-        let tap = UITapGestureRecognizer(target: self, action: #selector(self.toggleCapture(_:)))
-        tap.numberOfTapsRequired = 1
-        toggleButton.addGestureRecognizer(tap);
+        captureSessionQueue.async {
+            self.captureControllerDelegate.startCamera(getCameraMode())
+        }
+
+        // Assume the AVCaptureSession reference is valid before startCamera() completes and
+        // remains valid for the duration of the program run.
+        let avCaptureSession = captureControllerDelegate.getAVCaptureSession()
+        avCameraPreview = AVCaptureVideoPreviewLayer(session: avCaptureSession)
+        arView.clipsToBounds = true
+        avCameraPreview.frame = arView.bounds
+        // Use resizeAspectFill instead of resizeAspect for both AV and ARKit camera previews.
+        avCameraPreview.videoGravity = AVLayerVideoGravity.resizeAspectFill
+        arView.layer.addSublayer(avCameraPreview)
+        arView.debugOptions = [.showFeaturePoints, .showWorldOrigin]
+
+        // Put a shadow under record time label.
+        timeLabel.text = ""
+        timeLabel.layer.shadowOffset = CGSize.zero
+        timeLabel.layer.masksToBounds = false
+        timeLabel.layer.shadowColor = UIColor.white.cgColor
+        timeLabel.layer.shadowRadius = 1.0
+        timeLabel.layer.shadowOpacity = 1.0
+        timeLabel.layer.shouldRasterize = true
+
+        toggleButton.layer.backgroundColor = UIColor.white.cgColor
+        toggleButton.layer.shadowColor = UIColor.white.cgColor
+        toggleButton.layer.masksToBounds = true
+        toggleButton.layer.borderWidth = 2
+
+        setupButtons(CaptureStatus.paused)
 
         setUpdateTimer()
     }
 
-    override func viewWillAppear(_ animated: Bool) {
-        timeLabel.text = ""
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if let settingsViewController = segue.destination as? SettingsViewController {
+            settingsViewController.viewControllerDelegate = self
+            settingsViewController.captureControllerDelegate = captureControllerDelegate
+            settingsViewController.captureSessionQueue = captureSessionQueue
+        }
     }
 
+    // Note that the recurring recording time text change causes this to be called each time.
     override func viewDidLayoutSubviews() {
-        toggleButton.layer.borderWidth = 2
+        super.viewDidLayoutSubviews()
 
+        // Seems necessary to keep the AV Camera preview correctly sized.
+        avCameraPreview.frame = arView.bounds
+    }
+
+    @IBAction func pressToggleButton(_ sender: UIButton) {
         if captureControllerDelegate.capturing() {
-            animateButtonRadius(toValue: toggleButton.frame.height/4.0)
-            toggleButton.layer.masksToBounds = true
+            // Do not allow captures shorter than one second, so that two capture sessions cannot start
+            // on the same second which would give them identical filenames and cause errors.
+            if let captureStartTimestamp = self.captureControllerDelegate.getCaptureStartTimestamp() {
+                if (ProcessInfo.processInfo.systemUptime - captureStartTimestamp) < 1.1 {
+                    return
+                }
+            }
+            setupButtons(CaptureStatus.paused)
+            captureSessionQueue.async {
+                self.captureControllerDelegate.stopCapture()
+            }
+        }
+        else {
+            setupButtons(CaptureStatus.capturing)
+            captureSessionQueue.async {
+                self.captureControllerDelegate.startCapture()
+            }
+        }
+    }
 
+    private func setupButtons(_ status: CaptureStatus) {
+        if status == CaptureStatus.paused {
+            toggleButton.setTitle("Start", for: .normal)
+            animateButtonRadius(toValue: toggleButton.frame.height / 4.0)
             toggleButton.layer.borderColor = UIColor.green.cgColor
-            toggleButton.layer.backgroundColor = UIColor.white.cgColor
-            toggleButton.layer.shadowColor = UIColor.white.cgColor
-        }
-        else {
-            animateButtonRadius(toValue: toggleButton.frame.height/2.0)
-            toggleButton.layer.masksToBounds = true
 
-            toggleButton.layer.borderColor = UIColor.red.cgColor
-            toggleButton.layer.backgroundColor = UIColor.white.cgColor
-            toggleButton.layer.shadowColor = UIColor.white.cgColor
-        }
-    }
-
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-    }
-
-    @objc private func toggleCapture(_ sender: UITapGestureRecognizer) {
-        if (!captureControllerDelegate.capturing()) {
-            captureControllerDelegate.startCapture();
-            self.toggleButton.setTitle("Stop", for: .normal);
-            //animateButtonRadius(toValue: toggleButton.frame.height/10.0)
-            UIApplication.shared.isIdleTimerDisabled = true
-        }
-        else {
-            captureControllerDelegate.stopCapture();
-            self.toggleButton.setTitle("Start", for: .normal)
-            //animateButtonRadius(toValue: toggleButton.frame.height/2.0)
             UIApplication.shared.isIdleTimerDisabled = false
+            settingsButton.isEnabled = true
+            filesButton.isEnabled = true
+            aboutButton.isEnabled = true
+        }
+        else {
+            toggleButton.setTitle("Stop", for: .normal)
+            animateButtonRadius(toValue: toggleButton.frame.height / 2.0)
+            toggleButton.layer.borderColor = UIColor.red.cgColor
+
+            UIApplication.shared.isIdleTimerDisabled = true
+            settingsButton.isEnabled = false
+            filesButton.isEnabled = false
+            aboutButton.isEnabled = false
         }
     }
 
@@ -75,8 +126,9 @@ class ViewController: UIViewController {
         updateTimer = DispatchSource.makeTimerSource(queue: DispatchQueue.main)
         updateTimer.schedule(deadline: .now(), repeating: .milliseconds(100), leeway: .milliseconds(10))
         updateTimer.setEventHandler { [weak self] in
-            if let recTime = self?.captureControllerDelegate.getRecTime() {
-                self?.timeLabel.text = String(format: "Rec time: %.02f s", recTime)
+            if let captureStartTimestamp = self?.captureControllerDelegate.getCaptureStartTimestamp() {
+                let timestamp = ProcessInfo.processInfo.systemUptime
+                self?.timeLabel.text = String(format: "Rec time: %.01f s", timestamp - captureStartTimestamp)
             }
             else {
                 self?.timeLabel.text = ""
@@ -89,9 +141,8 @@ class ViewController: UIViewController {
     @IBAction func unwindToMain(segue: UIStoryboardSegue) {
     }
 
-    // MARK: - Animate button
-    func animateButtonRadius(toValue: CGFloat) {
-        let animation = CABasicAnimation(keyPath:"cornerRadius")
+    private func animateButtonRadius(toValue: CGFloat) {
+        let animation = CABasicAnimation(keyPath: "cornerRadius")
         animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
         animation.fromValue = toggleButton.layer.cornerRadius
         animation.toValue = toValue
@@ -101,5 +152,23 @@ class ViewController: UIViewController {
     }
 }
 
+extension ViewController: ViewControllerDelegate {
+    func updateCameraMode(_ cameraMode: CameraMode) {
+        // Once AV Camera has been started, the preview stays opaque even when the camera
+        // is stopped, so we toggle the layer visibility.
+        if cameraMode == CameraMode.AV {
+            self.avCameraPreview.isHidden = false
+        }
+        else {
+            self.avCameraPreview.isHidden = true
+        }
+    }
+}
+
 extension ViewController: ARSCNViewDelegate {
+}
+
+enum CaptureStatus {
+    case paused
+    case capturing
 }

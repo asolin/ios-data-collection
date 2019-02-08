@@ -14,10 +14,6 @@ class FilesViewController: UIViewController, UITableViewDataSource, UITableViewD
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "myCell")
     }
 
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-    }
-
     private func listFilesFromDocumentsFolder() -> [String]? {
         let fileMngr = FileManager.default;
         let docs = fileMngr.urls(for: .documentDirectory, in: .userDomainMask)[0].path
@@ -46,11 +42,11 @@ class FilesViewController: UIViewController, UITableViewDataSource, UITableViewD
         if cell.textLabel?.text?.range(of: "mov") != nil {
             cell.imageView?.image = UIImage(named: "movie")
         }
-        else if cell.textLabel?.text?.range(of: "csv") != nil {
-            cell.imageView?.image = UIImage(named: "four_leaf")
-        }
         else if cell.textLabel?.text?.range(of: "pcl") != nil {
             cell.imageView?.image = UIImage(named: "pointcloud")
+        }
+        else if cell.textLabel?.text?.range(of: "csv") != nil {
+            cell.imageView?.image = UIImage(named: "four_leaf")
         }
         return cell
     }

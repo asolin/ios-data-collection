@@ -23,6 +23,9 @@ func runAccDataAcquisition(_ motionManager: CMMotionManager, _ opQueue: Operatio
             if (error != nil){
                 print("\(String(describing: error))");
             }
+            if outputStream.streamStatus == Stream.Status.closed {
+                return
+            }
             let str = NSString(format:"%f,%d,%f,%f,%f\n",
                                accelerometerData.timestamp,
                                ACCELEROMETER_ID,
@@ -43,6 +46,12 @@ func runGyroDataAcquisition(_ motionManager: CMMotionManager, _ opQueue: Operati
     if motionManager.isGyroAvailable && !motionManager.isGyroActive {
         motionManager.gyroUpdateInterval = GYROSCOPE_DT
         motionManager.startGyroUpdates(to: opQueue, withHandler: {(gyroData: CMGyroData!, error: Error!) in
+            if (error != nil){
+                print("\(String(describing: error))");
+            }
+            if outputStream.streamStatus == Stream.Status.closed {
+                return
+            }
             let str = NSString(format:"%f,%d,%f,%f,%f\n",
                                gyroData.timestamp,
                                GYROSCOPE_ID,
@@ -66,6 +75,9 @@ func runMagnetometerDataAcquisition(_ motionManager: CMMotionManager, _ opQueue:
             if (error != nil){
                 print("\(String(describing: error))");
             }
+            if outputStream.streamStatus == Stream.Status.closed {
+                return
+            }
             let str = NSString(format:"%f,%d,%f,%f,%f\n",
                                magnetometerData.timestamp,
                                MAGNETOMETER_ID,
@@ -87,6 +99,9 @@ func runBarometerDataAcquisition(_ altimeter: CMAltimeter, _ opQueue: OperationQ
         altimeter.startRelativeAltitudeUpdates(to: opQueue, withHandler: {(altitudeData: CMAltitudeData!, error: Error!) in
             if (error != nil){
                 print("\(String(describing: error))");
+            }
+            if outputStream.streamStatus == Stream.Status.closed {
+                return
             }
 
             let str = NSString(format:"%f,%d,%f,%f,0\n",
