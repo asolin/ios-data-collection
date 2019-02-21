@@ -51,6 +51,8 @@ class CaptureController: NSObject {
     private var frameCount = 0
     private var firstFrame: Bool = true
 
+    private var arConfiguration: ARWorldTrackingConfiguration!
+
     func start(_ captureSessionQueue: DispatchQueue) {
         self.captureSessionQueue = captureSessionQueue
         opQueue = OperationQueue()
@@ -59,6 +61,23 @@ class CaptureController: NSObject {
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.delegate = self
         locationManager.requestWhenInUseAuthorization()
+
+        arConfiguration = ARWorldTrackingConfiguration()
+        // arConfiguration.planeDetection = .horizontal
+        // Resolution and autofocus can be set starting from iOS 11.3.
+        // The default is best resolution and auto focus enabled.
+        if #available(iOS 11.3, *) {
+            arConfiguration.isAutoFocusEnabled = false
+            // for f in ARWorldTrackingConfiguration.supportedVideoFormats {
+            //     if f.imageResolution.height == 1080 {
+            //         // With default resolution 1920x1440, the 1920x1080 resulting video with this setting seems to be stretched.
+            //         arConfiguration.videoFormat = f
+            //         print("set video format")
+            //     }
+            //     print(f)
+            // }
+            // print(arConfiguration.videoFormat)
+        }
 
         Clock.sync()
     }
@@ -91,11 +110,9 @@ class CaptureController: NSObject {
             try camera.lockForConfiguration()
 
             // Lock focus to the maximum value 1.0.
-            /*
             if camera.isLockingFocusWithCustomLensPositionSupported {
                 camera.setFocusModeLocked(lensPosition: 1.0, completionHandler: nil)
             }
-            */
 
             // Example of setting exposure.
             /*
@@ -245,17 +262,7 @@ extension CaptureController: CaptureControllerDelegate {
         case .AV:
             startAVCamera()
         case .ARKit:
-            let configuration = ARWorldTrackingConfiguration()
-            // Resolution can be set starting from iOS 11.3. Default seems to be the best one.
-            /*
-            if #available(iOS 11.3, *) {
-                print(configuration.videoFormat)
-                for f in ARWorldTrackingConfiguration.supportedVideoFormats {
-                    print(f)
-                }
-            }
-            */
-            arSession.run(configuration)
+            arSession.run(arConfiguration)
         }
     }
 
@@ -313,9 +320,7 @@ extension CaptureController: CaptureControllerDelegate {
         case .ARKit:
             //if !UserDefaults.standard.bool(forKey: SettingsKeys.VideoARKitEnableKey) { }
             arSession.pause()
-            let configuration = ARWorldTrackingConfiguration()
-            configuration.planeDetection = .horizontal
-            arSession.run(configuration, options: [.resetTracking, .removeExistingAnchors])
+            arSession.run(arConfiguration, options: [.resetTracking, .removeExistingAnchors])
         }
         frameCount = 0;
         firstFrame = true
