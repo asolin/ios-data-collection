@@ -34,10 +34,14 @@ class ViewController: UIViewController {
         // remains valid for the duration of the program run.
         let avCaptureSession = captureControllerDelegate.getAVCaptureSession()
         avCameraPreview = AVCaptureVideoPreviewLayer(session: avCaptureSession)
-        arView.clipsToBounds = true
         avCameraPreview.frame = arView.bounds
+
+        // arView.clipsToBounds = true
+
         // Use resizeAspectFill instead of resizeAspect for both AV and ARKit camera previews.
-        avCameraPreview.videoGravity = AVLayerVideoGravity.resizeAspectFill
+        arView.layer.contentsGravity = CALayerContentsGravity.resizeAspect
+        avCameraPreview.videoGravity = AVLayerVideoGravity.resizeAspect
+
         arView.layer.addSublayer(avCameraPreview)
         arView.debugOptions = [.showFeaturePoints, .showWorldOrigin]
 
