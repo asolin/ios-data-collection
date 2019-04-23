@@ -110,9 +110,11 @@ class CaptureController: NSObject {
             try camera.lockForConfiguration()
 
             // Lock focus to the maximum value 1.0.
-            if camera.isLockingFocusWithCustomLensPositionSupported {
-                camera.setFocusModeLocked(lensPosition: 1.0, completionHandler: nil)
-            }
+            // TODO This works, but is probably a poor default because it makes the recording sharpness so much
+            //      worse. The settings tab should have a switch for this if locking focus is a desired feature.
+            // if camera.isLockingFocusWithCustomLensPositionSupported {
+            //     camera.setFocusModeLocked(lensPosition: 1.0, completionHandler: nil)
+            // }
 
             // Example of setting exposure.
             /*
