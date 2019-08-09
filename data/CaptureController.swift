@@ -6,6 +6,7 @@ import AVFoundation
 import CoreLocation
 import ARKit
 import Kronos
+import UIKit
 
 protocol CaptureControllerDelegate: class {
     func capturing() -> Bool
@@ -37,7 +38,8 @@ class CaptureController: NSObject {
     private let captureSession = AVCaptureSession()
     private var cameraInput: AVCaptureDeviceInput?
     private var camera: AVCaptureDevice!
-    private let preset = AVCaptureSession.Preset.high
+    private let preset = AVCaptureSession.Preset.hd1920x1080
+    private let stillImageOutput = AVCapturePhotoOutput()
 
     // Files.
     private var baseFilename: String = ""
@@ -90,7 +92,7 @@ class CaptureController: NSObject {
             else {
                 throw CameraControllerError.unsupportedPreset
             }
-
+            
             // Use WideAngle, the device type with shortest focal length. The rest are fallbacks.
             let deviceTypes = [
                 AVCaptureDevice.DeviceType.builtInWideAngleCamera,
@@ -99,13 +101,37 @@ class CaptureController: NSObject {
                 ]
             let session = AVCaptureDevice.DiscoverySession(deviceTypes: deviceTypes, mediaType: AVMediaType.video, position: .back)
 
-            let cameras = session.devices.compactMap { $0 }
-            guard let camera = cameras.first else { throw CameraControllerError.backCameraNotAvailable }
-            self.cameraInput = try AVCaptureDeviceInput(device: camera)
-            if captureSession.canAddInput(self.cameraInput!) {
-                captureSession.addInput(self.cameraInput!)
+            //let cameras = session.devices.compactMap { $0 }
+            //guard let camera = cameras.first else { throw CameraControllerError.backCameraNotAvailable }
+            
+            // Override the choosing of the camera
+            guard let camera = AVCaptureDevice.default(.builtInDualCamera, for: .video, position: .back) else { throw CameraControllerError.backCameraNotAvailable }
+            
+            //let captureSession = AVCaptureSession()
+            
+            captureSession.beginConfiguration()
+            captureSession.sessionPreset = AVCaptureSession.Preset.photo
+            
+            let captureDevice = AVCaptureDevice.default(.builtInDualCamera, for: .video, position: .back)
+            
+            let videoDeviceInput = try AVCaptureDeviceInput(device: captureDevice!)
+            if captureSession.canAddInput(videoDeviceInput) {
+                captureSession.addInput(videoDeviceInput)
+            } else {
+                print("Failed to add cameraInput")
             }
-
+            if captureSession.canAddOutput(stillImageOutput) {
+                captureSession.addOutput(stillImageOutput)
+            } else {
+                print("Failed to add stillImageOutput")
+            }
+            stillImageOutput.isHighResolutionCaptureEnabled = true
+            stillImageOutput.isDualCameraDualPhotoDeliveryEnabled = true
+            
+            captureSession.commitConfiguration()
+            
+            /*
+            
             // The remaining configuration must come after setting any session presets.
             try camera.lockForConfiguration()
 
@@ -148,12 +174,14 @@ class CaptureController: NSObject {
 
             camera.unlockForConfiguration()
             self.camera = camera
+ 
+            */
 
             // Note that it may take some time for the sensors to physically adjust,
             // so querying some of the values here might not give expected results
             // (that's what the `completionHandler` callbacks are for).
         }
-
+        /*
         func configureVideoOutput() throws {
             let videoOutput = AVCaptureVideoDataOutput()
 
@@ -161,14 +189,13 @@ class CaptureController: NSObject {
 
             //videoOutput.alwaysDiscardsLateVideoFrames = true
             videoOutput.setSampleBufferDelegate(self, queue: captureSessionQueue)
-
             let outputs = captureSession.outputs
             for output in outputs {
                 captureSession.removeOutput(output)
             }
             guard captureSession.canAddOutput(videoOutput) else { throw CameraControllerError.cannotAddOutput }
             captureSession.addOutput(videoOutput)
-
+ 
             guard let connection = videoOutput.connection(with: AVFoundation.AVMediaType.video) else { throw CameraControllerError.noConnection }
             if connection.isVideoOrientationSupported {
                 connection.videoOrientation = .portrait
@@ -177,11 +204,12 @@ class CaptureController: NSObject {
                 // Inserts the intrinsic matrix in each sample buffer.
                 connection.isCameraIntrinsicMatrixDeliveryEnabled = true
             }
+            
         }
-
+        */
         do {
             try configureCaptureDevice()
-            try configureVideoOutput()
+            //try configureVideoOutput()
             self.captureSession.startRunning()
         }
         catch {
@@ -212,6 +240,11 @@ class CaptureController: NSObject {
             kCVPixelBufferPixelFormatTypeKey as String : Int(kCVPixelFormatType_32BGRA) as AnyObject,
             ]
 
+        // Check if the settings are ok on this device!
+        guard (assetWriter!.canApply(outputSettings: videoOutputSettings, forMediaType: AVMediaType.video)) else {
+            fatalError("Negative : Can't apply the Output settings...")
+        }
+        
         videoInput = AVAssetWriterInput(mediaType: AVMediaType.video, outputSettings: videoOutputSettings)
         videoInput?.expectsMediaDataInRealTime = true
         // Rotate by 90 degrees to get portrait orientation. Do not use initializer parameter `rotationAngle: CGFloat(Double.pi/2))`
@@ -219,10 +252,20 @@ class CaptureController: NSObject {
         videoInput?.transform = CGAffineTransform.init(a: 0.0, b: 1.0, c: -1.0, d: 0.0, tx: 0.0, ty: 0.0);
         pixelBufferAdaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: videoInput!, sourcePixelBufferAttributes: sourceBufferAttributes)
 
-        assetWriter!.add(videoInput!)
-        assetWriter!.startWriting()
+        if assetWriter!.canAdd(videoInput!) {
+            assetWriter!.add(videoInput!)
+        } else {
+            print("Failed to add video writing input!")
+        }
+        if assetWriter!.startWriting() {
+            print("Started writing!")
+        } else {
+            print("Cannot start writing!")
+        }
 
         assetWriter!.startSession(atSourceTime: timestamp)
+        
+        //guard assetWriter!.status == .writing else { print("Not writing."); return }
     }
 
     private func runLocation() {
@@ -326,9 +369,19 @@ extension CaptureController: CaptureControllerDelegate {
         }
         frameCount = 0;
         firstFrame = true
-
+        
         isCapturing = true
         print("Recording started!")
+        
+        let photoSettings = AVCapturePhotoSettings()
+        photoSettings.isAutoStillImageStabilizationEnabled = false
+        photoSettings.isHighResolutionPhotoEnabled = true
+        photoSettings.isAutoDualCameraFusionEnabled = false
+        photoSettings.isDualCameraDualPhotoDeliveryEnabled = true
+        photoSettings.isCameraCalibrationDataDeliveryEnabled = true
+
+        stillImageOutput.capturePhoto(with: photoSettings, delegate: self)
+        
     }
 
     func stopCapture() {
@@ -454,12 +507,116 @@ extension CaptureController: CLLocationManagerDelegate {
     }
 }
 
+
+
+
+extension CaptureController: AVCapturePhotoCaptureDelegate {
+    
+    //func photoOutput(_ captureOutput: AVCapturePhotoOutput, didFinishProcessingPhoto photoSampleBuffer: CMSampleBuffer?, previewPhoto previewPhotoSampleBuffer: CMSampleBuffer?, resolvedSettings: AVCaptureResolvedPhotoSettings, bracketSettings: AVCaptureBracketedStillImageSettings?, error: Error?) {
+    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+
+        if !isCapturing {
+            return
+        }
+        
+        /* For debugging */
+        //print(photo.sourceDeviceType!)
+        //print(photo.cameraCalibrationData!)
+        //print(photo.cameraCalibrationData!.extrinsicMatrix)
+        
+        /*
+        // Documents the bug in the Apple API -> We must take a detour
+        guard let photoPixelBuffer = photo.pixelBuffer else {
+           print("Error occurred while capturing photo: Missing pixel buffer (\(String(describing: error)))")
+           return
+       }
+       */
+        
+        let startTime = CFAbsoluteTimeGetCurrent()
+        
+        // Convert image data
+        let imageData = photo.fileDataRepresentation()
+        let dataProvider = CGDataProvider(data: imageData! as CFData)
+        let cgImageRef = CGImage(jpegDataProviderSource: dataProvider!, decode: nil, shouldInterpolate: true, intent: CGColorRenderingIntent.absoluteColorimetric)
+        
+        // Resize
+        //let size = CGSize(width: 1440.0, height: 1080.0)
+        let size = CGSize(width: 1280.0, height: 960.0)
+        var uiImg = UIImage(cgImage: cgImageRef!)
+        uiImg = uiImg.resizeImage(targetSize: size)
+        let cgImageRefSmall = uiImg.cgImage
+        
+        // Continue
+        let imageBuffer = cgImageRef!.pixelBuffer(width: cgImageRefSmall!.width, height: cgImageRefSmall!.height, orientation: .up)
+        
+        // Timestamp
+        let timestamp = photo.timestamp
+        
+        // Initialization.
+        if (firstFrame) {
+            setupAssetWriter(imageBuffer!, timestamp)
+            firstFrame = false
+        }
+        
+        if (self.videoInput!.isReadyForMoreMediaData) {
+            // Append image to the video.
+            self.pixelBufferAdaptor?.append(imageBuffer!, withPresentationTime: timestamp)
+        }
+        else {
+            print("captureOutput(): videoInput not ready.")
+        }
+        
+        // Data to push to csv
+        let intrinsics = photo.cameraCalibrationData!.intrinsicMatrix
+        let extrinsics = photo.cameraCalibrationData!.extrinsicMatrix
+        
+        // Append frame data to csv.
+        /*
+        let str = NSString(format: "%f,%d,%d\n",
+                           CMTimeGetSeconds(timestamp),
+                           CAMERA_ID,
+                           self.frameCount
+        )
+        */
+        // Append frame data to csv.
+        let str = NSString(format:"%f,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
+                           CMTimeGetSeconds(timestamp),
+                           CAMERA_ID,
+                           self.frameCount,
+                           intrinsics[0][0], intrinsics[1][1], intrinsics[2][0], intrinsics[2][1],
+                           extrinsics[0][0],extrinsics[1][0],extrinsics[2][0],extrinsics[3][0],
+                           extrinsics[0][1],extrinsics[1][1],extrinsics[2][1],extrinsics[3][1],
+                           extrinsics[0][2],extrinsics[1][2],extrinsics[2][2],extrinsics[3][2])
+        if sensorOutputStream.write(str as String) < 0 {
+            print("Failure writing camera frame to output csv.")
+        }
+        
+        self.frameCount = self.frameCount + 1
+        
+        let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
+        print("Time elapsed for image storage: \(timeElapsed) s.")
+        
+        // Capture next (or DeviceType.builtInWideAngleCamera )
+        if photo.sourceDeviceType == AVCaptureDevice.DeviceType.builtInTelephotoCamera {
+            let photoSettings = AVCapturePhotoSettings()
+            photoSettings.isAutoStillImageStabilizationEnabled = false
+            photoSettings.isHighResolutionPhotoEnabled = true
+            photoSettings.isAutoDualCameraFusionEnabled = false
+            photoSettings.isDualCameraDualPhotoDeliveryEnabled = true
+            photoSettings.isCameraCalibrationDataDeliveryEnabled = true
+            stillImageOutput.capturePhoto(with: photoSettings, delegate: self)
+        }
+    }
+}
+
+/*
 extension CaptureController: AVCaptureVideoDataOutputSampleBufferDelegate {
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection:
             AVCaptureConnection) {
         if !isCapturing {
             return
         }
+        
         let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)!
         let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
 
@@ -505,6 +662,7 @@ extension CaptureController: AVCaptureVideoDataOutputSampleBufferDelegate {
         print("Dropped frame in captureOutput().")
     }
 }
+*/
 
 // MARK: - OutputStream: Write Strings
 extension OutputStream {
@@ -584,4 +742,21 @@ enum CameraMode {
 enum Storage {
     case temporary
     case documents
+}
+
+extension UIImage {
+    func resizeImage(targetSize: CGSize) -> UIImage {
+        let size = self.size
+        let widthRatio  = targetSize.width  / size.width
+        let heightRatio = targetSize.height / size.height
+        let newSize = widthRatio > heightRatio ?  CGSize(width: size.width * heightRatio, height: size.height * heightRatio) : CGSize(width: size.width * widthRatio,  height: size.height * widthRatio)
+        let rect = CGRect(x: 0, y: 0, width: newSize.width, height: newSize.height)
+        
+        UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
+        self.draw(in: rect)
+        let newImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        
+        return newImage!
+    }
 }

@@ -12,6 +12,7 @@
 		5F7D8D5221A58AD600C064E5 /* AboutViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F7D8D5121A58AD600C064E5 /* AboutViewController.swift */; };
 		5FD98B4421A4213300A95682 /* SettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FD98B4321A4213300A95682 /* SettingsViewController.swift */; };
 		5FD98B4621A42B1A00A95682 /* SettingsKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FD98B4521A42B1A00A95682 /* SettingsKeys.swift */; };
+		654682E622FB6AA900252359 /* CGImage+CVPixelBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 654682E522FB6AA900252359 /* CGImage+CVPixelBuffer.swift */; };
 		65B28B0B1F7642F80048AFD3 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65B28B0A1F7642F80048AFD3 /* AppDelegate.swift */; };
 		65B28B0D1F7642F80048AFD3 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65B28B0C1F7642F80048AFD3 /* ViewController.swift */; };
 		65B28B101F7642F80048AFD3 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 65B28B0E1F7642F80048AFD3 /* Main.storyboard */; };
@@ -30,6 +31,7 @@
 		5F7D8D5121A58AD600C064E5 /* AboutViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutViewController.swift; sourceTree = "<group>"; };
 		5FD98B4321A4213300A95682 /* SettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewController.swift; sourceTree = "<group>"; };
 		5FD98B4521A42B1A00A95682 /* SettingsKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsKeys.swift; sourceTree = "<group>"; };
+		654682E522FB6AA900252359 /* CGImage+CVPixelBuffer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "CGImage+CVPixelBuffer.swift"; sourceTree = "<group>"; };
 		65B28B071F7642F80048AFD3 /* data.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = data.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		65B28B0A1F7642F80048AFD3 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		65B28B0C1F7642F80048AFD3 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -104,6 +106,7 @@
 				5F6304E121AAD03D00FB0019 /* SettingsTableViewCell.swift */,
 				5FD98B4521A42B1A00A95682 /* SettingsKeys.swift */,
 				5F7D8D5121A58AD600C064E5 /* AboutViewController.swift */,
+				654682E522FB6AA900252359 /* CGImage+CVPixelBuffer.swift */,
 				65B28B0E1F7642F80048AFD3 /* Main.storyboard */,
 				65B28B111F7642F80048AFD3 /* Assets.xcassets */,
 				65B28B131F7642F80048AFD3 /* LaunchScreen.storyboard */,
@@ -146,7 +149,7 @@
 				TargetAttributes = {
 					65B28B061F7642F80048AFD3 = {
 						CreatedOnToolsVersion = 8.3.3;
-						DevelopmentTeam = 788P9S87T6;
+						DevelopmentTeam = 23ATX9NR5T;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -156,6 +159,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 				Base,
 			);
@@ -232,6 +236,7 @@
 				895E616721E6161C00C66194 /* Sensor.swift in Sources */,
 				65B28B0D1F7642F80048AFD3 /* ViewController.swift in Sources */,
 				5FD98B4621A42B1A00A95682 /* SettingsKeys.swift in Sources */,
+				654682E622FB6AA900252359 /* CGImage+CVPixelBuffer.swift in Sources */,
 				65B28B2B1F79474D0048AFD3 /* FilesViewController.swift in Sources */,
 				5F6304E221AAD03D00FB0019 /* SettingsTableViewCell.swift in Sources */,
 				65B28B0B1F7642F80048AFD3 /* AppDelegate.swift in Sources */,
@@ -379,11 +384,11 @@
 			baseConfigurationReference = 9CB671DA9C32A1B982E52073 /* Pods-data.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				DEVELOPMENT_TEAM = 788P9S87T6;
+				DEVELOPMENT_TEAM = 23ATX9NR5T;
 				INFOPLIST_FILE = data/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = com.pekkaran.data;
+				PRODUCT_BUNDLE_IDENTIFIER = fi.solin.data;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 4.2;
 			};
@@ -394,11 +399,11 @@
 			baseConfigurationReference = EC69CE88D987E147C32F5975 /* Pods-data.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				DEVELOPMENT_TEAM = 788P9S87T6;
+				DEVELOPMENT_TEAM = 23ATX9NR5T;
 				INFOPLIST_FILE = data/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = com.pekkaran.data;
+				PRODUCT_BUNDLE_IDENTIFIER = fi.solin.data;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 4.2;
 			};
