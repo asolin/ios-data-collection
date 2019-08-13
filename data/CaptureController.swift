@@ -7,6 +7,7 @@ import CoreLocation
 import ARKit
 import Kronos
 import UIKit
+import Accelerate
 
 protocol CaptureControllerDelegate: class {
     func capturing() -> Bool
@@ -52,6 +53,19 @@ class CaptureController: NSObject {
     private var captureStartTimestamp: Optional<TimeInterval> = Optional.none
     private var frameCount = 0
     private var firstFrame: Bool = true
+    
+    var cgImageFormat = vImage_CGImageFormat(
+        bitsPerComponent: 8,
+        bitsPerPixel: 32,
+        colorSpace: nil,
+        bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipFirst.rawValue),
+        version: 0,
+        decode: nil,
+        renderingIntent: .defaultIntent)
+    
+    private var converter: vImageConverter?
+    private var sourceBuffers = [vImage_Buffer]()
+    private var destinationBuffer = vImage_Buffer()
 
     private var arConfiguration: ARWorldTrackingConfiguration!
 
@@ -127,6 +141,7 @@ class CaptureController: NSObject {
             }
             stillImageOutput.isHighResolutionCaptureEnabled = true
             stillImageOutput.isDualCameraDualPhotoDeliveryEnabled = true
+            stillImageOutput.isDepthDataDeliveryEnabled = true
             
             captureSession.commitConfiguration()
             
@@ -237,9 +252,9 @@ class CaptureController: NSObject {
         // If grayscale: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
         // If color: kCVPixelFormatType_32BGRA / kCVPixelFormatType_32ARGB
         let sourceBufferAttributes : [String : AnyObject] = [
-            kCVPixelBufferPixelFormatTypeKey as String : Int(kCVPixelFormatType_32BGRA) as AnyObject,
+            kCVPixelBufferPixelFormatTypeKey as String : Int(kCVPixelFormatType_32ARGB) as AnyObject,
             ]
-
+        
         // Check if the settings are ok on this device!
         guard (assetWriter!.canApply(outputSettings: videoOutputSettings, forMediaType: AVMediaType.video)) else {
             fatalError("Negative : Can't apply the Output settings...")
@@ -373,13 +388,15 @@ extension CaptureController: CaptureControllerDelegate {
         isCapturing = true
         print("Recording started!")
         
-        let photoSettings = AVCapturePhotoSettings()
+        //let photoSettings = AVCapturePhotoSettings()
+        let photoSettings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
         photoSettings.isAutoStillImageStabilizationEnabled = false
         photoSettings.isHighResolutionPhotoEnabled = true
         photoSettings.isAutoDualCameraFusionEnabled = false
         photoSettings.isDualCameraDualPhotoDeliveryEnabled = true
         photoSettings.isCameraCalibrationDataDeliveryEnabled = true
-
+        photoSettings.embedsDepthDataInPhoto = false
+        photoSettings.isDepthDataDeliveryEnabled = true
         stillImageOutput.capturePhoto(with: photoSettings, delegate: self)
         
     }
@@ -391,6 +408,7 @@ extension CaptureController: CaptureControllerDelegate {
         // Stop video capture.
         if self.assetWriter?.status != AVAssetWriter.Status.writing {
             print("Expected assetWriter to be writing.")
+            print(self.assetWriter?.error!)
             return
         }
         self.assetWriter?.finishWriting(completionHandler: {
@@ -536,18 +554,117 @@ extension CaptureController: AVCapturePhotoCaptureDelegate {
         
         // Convert image data
         let imageData = photo.fileDataRepresentation()
-        let dataProvider = CGDataProvider(data: imageData! as CFData)
-        let cgImageRef = CGImage(jpegDataProviderSource: dataProvider!, decode: nil, shouldInterpolate: true, intent: CGColorRenderingIntent.absoluteColorimetric)
         
+        let dataProvider = CGDataProvider(data: imageData! as CFData)
+        //let cgImageRef = CGImage(jpegDataProviderSource: dataProvider!, decode: nil, shouldInterpolate: true, intent: CGColorRenderingIntent.absoluteColorimetric)
+        let cgImageRef = CGImage(jpegDataProviderSource: dataProvider!, decode: nil, shouldInterpolate: true, intent: CGColorRenderingIntent.absoluteColorimetric)
+ 
         // Resize
-        //let size = CGSize(width: 1440.0, height: 1080.0)
-        let size = CGSize(width: 1280.0, height: 960.0)
+        let size = CGSize(width: 1920.0, height: 1440.0)
+        //let size = CGSize(width: 1280.0, height: 720.0)
         var uiImg = UIImage(cgImage: cgImageRef!)
         uiImg = uiImg.resizeImage(targetSize: size)
         let cgImageRefSmall = uiImg.cgImage
         
         // Continue
-        let imageBuffer = cgImageRef!.pixelBuffer(width: cgImageRefSmall!.width, height: cgImageRefSmall!.height, orientation: .up)
+        var imageBuffer = cgImageRefSmall!.pixelBuffer(width: cgImageRefSmall!.width, height: cgImageRefSmall!.height, orientation: .up)
+        //let imageBuffer = cgImageRefSmall!.pixelBuffer(width: cgImageRefSmall!.width, height: cgImageRefSmall!.height, pixelFormatType: kCVPixelFormatType_32ARGB, colorSpace: CGColorSpaceCreateDeviceRGB(), alphaInfo: .noneSkipFirst, orientation: .up)
+        
+        // This is true
+        //print(CVPixelBufferGetPixelFormatType(imageBuffer!)==kCVPixelFormatType_32ARGB)
+        //print(CVPixelBufferGetWidth(imageBuffer!))
+        //print(cgImageRefSmall!.colorSpace!) // kCGColorSpaceICCBased; kCGColorSpaceModelRGB; sRGB IEC61966-2.1)
+        
+        
+        /* Note: The lengthy code here is for manipulating the image coding from the photo format into a format that is supported by AVAssetWriter on the iPhone X. This is unnecessary on iPhone XS, but required on X. TL;DR: Use Accelerate to manipulate the frame data */ :
+        // See https://developer.apple.com/documentation/accelerate/vimage/applying_vimage_operations_to_video_sample_buffers
+        
+        // Lock
+        CVPixelBufferLockBaseAddress(imageBuffer!,
+                                     CVPixelBufferLockFlags.readOnly)
+
+        // Format
+        let cvImageFormat = vImageCVImageFormat_CreateWithCVPixelBuffer(imageBuffer!).takeRetainedValue()
+        
+        var error = kvImageNoError
+        
+        if converter == nil {
+            let cvImageFormat = vImageCVImageFormat_CreateWithCVPixelBuffer(imageBuffer!).takeRetainedValue()
+            
+            vImageCVImageFormat_SetColorSpace(cvImageFormat,
+                                              CGColorSpaceCreateDeviceRGB())
+            
+            vImageCVImageFormat_SetChromaSiting(cvImageFormat,
+                                                kCVImageBufferChromaLocation_Center)
+            
+            guard
+                let unmanagedConverter = vImageConverter_CreateForCVToCGImageFormat(
+                    cvImageFormat,
+                    &cgImageFormat,
+                    nil,
+                    vImage_Flags(kvImagePrintDiagnosticsToConsole),
+                    &error),
+                error == kvImageNoError else {
+                    print("vImageConverter_CreateForCVToCGImageFormat error:", error)
+                    return
+            }
+            
+            converter = unmanagedConverter.takeRetainedValue()
+        }
+        
+        // Init source buffers
+        if sourceBuffers.isEmpty {
+            let numberOfSourceBuffers = Int(vImageConverter_GetNumberOfSourceBuffers(converter!))
+            sourceBuffers = [vImage_Buffer](repeating: vImage_Buffer(),
+                                            count: numberOfSourceBuffers)
+        }
+        
+        // Set source
+        vImageBuffer_InitForCopyFromCVPixelBuffer(
+            &sourceBuffers,
+            converter!,
+            imageBuffer!,
+            vImage_Flags(kvImageNoAllocate))
+        
+        // Allocate destination buffer only once for performance
+        if destinationBuffer.data == nil {
+            error = vImageBuffer_Init(&destinationBuffer,
+                                          UInt(CVPixelBufferGetHeightOfPlane(imageBuffer!, 0)),
+                                          UInt(CVPixelBufferGetWidthOfPlane(imageBuffer!, 0)),
+                                          cgImageFormat.bitsPerPixel,
+                                          vImage_Flags(kvImageNoFlags))
+        }
+        
+        error = vImageConvert_AnyToAny(converter!,
+                                       &sourceBuffers,
+                                       &destinationBuffer,
+                                       nil,
+                                       vImage_Flags(kvImageNoFlags))
+        
+        guard error == kvImageNoError else {
+            return
+        }
+        
+        vImageBuffer_CopyToCVPixelBuffer(&destinationBuffer,
+                                        &cgImageFormat,
+                                        imageBuffer!,
+                                        nil,
+                                        nil,
+                                        vImage_Flags(kvImageNoFlags));
+
+        
+        // Unlock
+        CVPixelBufferUnlockBaseAddress(imageBuffer!,
+                                       CVPixelBufferLockFlags.readOnly)
+
+        
+        
+        //vImageConvert_ARGB8888toRGB888(UnsafeRawPointer(imageBuffer), UnsafeRawPointer(imageBuffer), kvImageNoFlags)
+        
+        //vImageConvert_AnyToAny(<#T##converter: vImageConverter##vImageConverter#>, <#T##srcs: UnsafePointer<vImage_Buffer>##UnsafePointer<vImage_Buffer>#>, <#T##dests: UnsafePointer<vImage_Buffer>##UnsafePointer<vImage_Buffer>#>, <#T##tempBuffer: UnsafeMutableRawPointer!##UnsafeMutableRawPointer!#>, <#T##flags: vImage_Flags##vImage_Flags#>)
+        
+        
+        //vImageConvert_Planar8toRGB888
         
         // Timestamp
         let timestamp = photo.timestamp
@@ -564,7 +681,31 @@ extension CaptureController: AVCapturePhotoCaptureDelegate {
         }
         else {
             print("captureOutput(): videoInput not ready.")
+            return
         }
+        
+        // Depth data
+        var depthData = photo.depthData
+        
+        /*
+        
+        if (depthData!.depthDataMap != nil) {
+        
+        if depthData!.depthDataType != kCVPixelFormatType_DisparityFloat32 {
+            depthData = depthData!.converting(toDepthDataType: kCVPixelFormatType_DisparityFloat32)
+        }
+        
+        if (self.videoInput!.isReadyForMoreMediaData) {
+            // Append image to the video.
+            self.pixelBufferAdaptor?.append(depthData!.depthDataMap, withPresentationTime: timestamp)
+        }
+        else {
+            print("captureOutput(): videoInput not ready.")
+            return
+        }
+        }
+ 
+        */
         
         // Data to push to csv
         let intrinsics = photo.cameraCalibrationData!.intrinsicMatrix
@@ -579,14 +720,15 @@ extension CaptureController: AVCapturePhotoCaptureDelegate {
         )
         */
         // Append frame data to csv.
-        let str = NSString(format:"%f,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
+        let str = NSString(format:"%f,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%d,%d\n",
                            CMTimeGetSeconds(timestamp),
                            CAMERA_ID,
                            self.frameCount,
                            intrinsics[0][0], intrinsics[1][1], intrinsics[2][0], intrinsics[2][1],
                            extrinsics[0][0],extrinsics[1][0],extrinsics[2][0],extrinsics[3][0],
                            extrinsics[0][1],extrinsics[1][1],extrinsics[2][1],extrinsics[3][1],
-                           extrinsics[0][2],extrinsics[1][2],extrinsics[2][2],extrinsics[3][2])
+                           extrinsics[0][2],extrinsics[1][2],extrinsics[2][2],extrinsics[3][2],
+                           cgImageRef!.width,cgImageRef!.height)
         if sensorOutputStream.write(str as String) < 0 {
             print("Failure writing camera frame to output csv.")
         }
@@ -598,12 +740,15 @@ extension CaptureController: AVCapturePhotoCaptureDelegate {
         
         // Capture next (or DeviceType.builtInWideAngleCamera )
         if photo.sourceDeviceType == AVCaptureDevice.DeviceType.builtInTelephotoCamera {
-            let photoSettings = AVCapturePhotoSettings()
+            //let photoSettings = AVCapturePhotoSettings()
+            let photoSettings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
             photoSettings.isAutoStillImageStabilizationEnabled = false
             photoSettings.isHighResolutionPhotoEnabled = true
             photoSettings.isAutoDualCameraFusionEnabled = false
             photoSettings.isDualCameraDualPhotoDeliveryEnabled = true
             photoSettings.isCameraCalibrationDataDeliveryEnabled = true
+            photoSettings.embedsDepthDataInPhoto = false
+            photoSettings.isDepthDataDeliveryEnabled = true
             stillImageOutput.capturePhoto(with: photoSettings, delegate: self)
         }
     }
@@ -760,3 +905,4 @@ extension UIImage {
         return newImage!
     }
 }
+
