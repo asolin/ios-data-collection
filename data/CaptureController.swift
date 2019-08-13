@@ -66,6 +66,10 @@ class CaptureController: NSObject {
     private var converter: vImageConverter?
     private var sourceBuffers = [vImage_Buffer]()
     private var destinationBuffer = vImage_Buffer()
+    
+    private var textureCache: CVMetalTextureCache?
+    
+    private let photoDepthConverter = DepthToGrayscaleConverter()
 
     private var arConfiguration: ARWorldTrackingConfiguration!
 
@@ -369,6 +373,8 @@ class CaptureController: NSObject {
         return source
     }
 
+    
+    
 }
 
 extension CaptureController: CaptureControllerDelegate {
@@ -754,6 +760,7 @@ extension CaptureController: AVCapturePhotoCaptureDelegate {
  
         */
         
+        // Convert photo to photo
         imageBuffer = convertRGB2RGB(imageBuffer!)
         
         // Timestamp
@@ -765,6 +772,7 @@ extension CaptureController: AVCapturePhotoCaptureDelegate {
             firstFrame = false
         }
         
+        
         if (self.videoInput!.isReadyForMoreMediaData) {
             // Append image to the video.
             self.pixelBufferAdaptor?.append(imageBuffer!, withPresentationTime: timestamp)
@@ -773,6 +781,8 @@ extension CaptureController: AVCapturePhotoCaptureDelegate {
             print("captureOutput(): videoInput not ready.")
             return
         }
+  
+        /* Try to access depth data */
         
         // Depth data
         var depthData = photo.depthData
@@ -781,21 +791,123 @@ extension CaptureController: AVCapturePhotoCaptureDelegate {
         
         if (depthData!.depthDataMap != nil) {
         
-        if depthData!.depthDataType != kCVPixelFormatType_DisparityFloat32 {
-            depthData = depthData!.converting(toDepthDataType: kCVPixelFormatType_DisparityFloat32)
-        }
-        
-        if (self.videoInput!.isReadyForMoreMediaData) {
-            // Append image to the video.
-            self.pixelBufferAdaptor?.append(depthData!.depthDataMap, withPresentationTime: timestamp)
-        }
-        else {
-            print("captureOutput(): videoInput not ready.")
-            return
-        }
+            if depthData!.depthDataType != kCVPixelFormatType_DisparityFloat32 {
+                depthData = depthData!.converting(toDepthDataType: kCVPixelFormatType_DisparityFloat32)
+            }
+            
+            let depthDataMap = depthData!.depthDataMap
+            
+            // Create a Metal texture from the image buffer.
+            if textureCache == nil {
+                var newTextureCache: CVMetalTextureCache?
+                if CVMetalTextureCacheCreate(kCFAllocatorDefault, nil, MTLCreateSystemDefaultDevice()!, nil, &newTextureCache) == kCVReturnSuccess {
+                    textureCache = newTextureCache
+                } else {
+                    assertionFailure("Unable to allocate texture cache")
+                }
+            }
+            var cvTextureOut: CVMetalTexture?
+            CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault,
+                                                      textureCache!,
+                                                      depthDataMap,
+                                                      nil,
+                                                      .bgra8Unorm, //.bgra8Unorm
+                                                      CVPixelBufferGetWidth(depthDataMap),
+                                                      CVPixelBufferGetHeight(depthDataMap),
+                                                      0,
+                                                      &cvTextureOut)
+            
+            //MTLPixelFormat.rgba32Sint
+            
+            //let ciImage = CIImage(cvPixelBuffer: depthDataMap)
+            let ciImage = CIImage(mtlTexture: CVMetalTextureGetTexture(cvTextureOut!)!, options: nil)
+            var depthDataMapImage = UIImage(ciImage: ciImage!)
+
+            depthDataMapImage = depthDataMapImage.resizeImage(targetSize: size)
+            let cgDepthData = depthDataMapImage.cgImage
+            
+            var imBufDepth = cgDepthData!.pixelBuffer(width: cgDepthData!.width, height: cgDepthData!.height, orientation: .up)
+            
+            //print(cgDepthData!.colorSpace!)
+            //print(CVPixelBufferGetPixelFormatType(imBufDepth!)==kCVPixelFormatType_32ARGB)
+            //print(CVPixelBufferGetWidth(imBufDepth!))
+            
+            // Convert photo to photo
+            imBufDepth = convertRGB2RGB(imBufDepth!)
+            
+            if (self.videoInput!.isReadyForMoreMediaData) {
+                // Append image to the video.
+                self.pixelBufferAdaptor?.append(imBufDepth!, withPresentationTime: timestamp)
+            }
+            else {
+                print("captureOutput(): videoInput not ready.")
+                return
+            }
+            
+        } else {
+            print("No depth data.")
         }
  
         */
+        
+        // METAL SHADER APPROACH
+        var min: Float = 0.0
+        var max: Float = 0.0
+        if (depthData!.depthDataMap != nil) {
+            
+            if depthData!.depthDataType != kCVPixelFormatType_DisparityFloat32 {
+                depthData = depthData!.converting(toDepthDataType: kCVPixelFormatType_DisparityFloat32)
+            }
+            
+            let depthPixelBuffer = depthData!.depthDataMap
+            
+            // MIN-MAX depth/disparity range
+            minMaxFromPixelBuffer(depthPixelBuffer, &min, &max, .r32Float)
+            
+            if !self.photoDepthConverter.isPrepared {
+                var depthFormatDescription: CMFormatDescription?
+                CMVideoFormatDescriptionCreateForImageBuffer(allocator: kCFAllocatorDefault,
+                                                             imageBuffer: depthPixelBuffer,
+                                                             formatDescriptionOut: &depthFormatDescription)
+                
+                /*
+                 outputRetainedBufferCountHint is the number of pixel buffers we expect to hold on to from the renderer.
+                 This value informs the renderer how to size its buffer pool and how many pixel buffers to preallocate.
+                 Allow 3 frames of latency to cover the dispatch_async call.
+                 */
+                if let unwrappedDepthFormatDescription = depthFormatDescription {
+                    self.photoDepthConverter.prepare(with: unwrappedDepthFormatDescription, outputRetainedBufferCountHint: 3)
+                }
+            }
+            
+            guard let convertedDepthPixelBuffer = self.photoDepthConverter.render(pixelBuffer: depthPixelBuffer) else {
+                print("Unable to convert depth pixel buffer")
+                return
+            }
+            
+            // Resize
+            let ciDepthImage = CIImage(cvPixelBuffer: convertedDepthPixelBuffer)
+            var uiDepthImg = UIImage(ciImage: ciDepthImage)
+            uiDepthImg = uiDepthImg.resizeImage(targetSize: size)
+            let cgImageDepthSmall = uiDepthImg.cgImage
+            var depthBuffer = cgImageDepthSmall!.pixelBuffer(width: cgImageDepthSmall!.width, height: cgImageDepthSmall!.height, orientation: .up)
+            
+            // Convert photo to photo
+            depthBuffer = convertRGB2RGB(depthBuffer!)
+            
+            if (self.videoInput!.isReadyForMoreMediaData) {
+                // Append image to the video.
+                self.pixelBufferAdaptor?.append(depthBuffer!, withPresentationTime: CMTimeMakeWithSeconds(CMTimeGetSeconds(timestamp) + 0.00000001, preferredTimescale: timestamp.timescale))
+            }
+            else {
+                print("captureOutput(): videoInput not ready.")
+                return
+            }
+            
+        } else {
+            print("No depth data")
+ 
+        }
         
         // Data to push to csv
         let intrinsics = photo.cameraCalibrationData!.intrinsicMatrix
@@ -810,7 +922,7 @@ extension CaptureController: AVCapturePhotoCaptureDelegate {
         )
         */
         // Append frame data to csv.
-        let str = NSString(format:"%f,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%d,%d\n",
+        let str = NSString(format:"%f,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%d,%d,%f,%f\n",
                            CMTimeGetSeconds(timestamp),
                            CAMERA_ID,
                            self.frameCount,
@@ -818,7 +930,7 @@ extension CaptureController: AVCapturePhotoCaptureDelegate {
                            extrinsics[0][0],extrinsics[1][0],extrinsics[2][0],extrinsics[3][0],
                            extrinsics[0][1],extrinsics[1][1],extrinsics[2][1],extrinsics[3][1],
                            extrinsics[0][2],extrinsics[1][2],extrinsics[2][2],extrinsics[3][2],
-                           cgImageRef!.width,cgImageRef!.height)
+                           cgImageRef!.width,cgImageRef!.height,min,max)
         if sensorOutputStream.write(str as String) < 0 {
             print("Failure writing camera frame to output csv.")
         }
