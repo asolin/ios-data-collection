@@ -288,6 +288,87 @@ class CaptureController: NSObject {
             locationManager.startUpdatingLocation()
         }
     }
+    
+    func convertRGB2RGB(_ source: CVPixelBuffer) -> CVPixelBuffer {
+        /* Note: The lengthy code here is for manipulating the image coding from the photo format into a format that is supported by AVAssetWriter on the iPhone X. This is unnecessary on iPhone XS, but required on X. TL;DR: Use Accelerate to manipulate the frame data */
+        
+        // Lock for processing
+        CVPixelBufferLockBaseAddress(source,
+                                     CVPixelBufferLockFlags.readOnly)
+        
+        // Format
+        let cvImageFormat = vImageCVImageFormat_CreateWithCVPixelBuffer(source).takeRetainedValue()
+        
+        var error = kvImageNoError
+        
+        if converter == nil {
+            let cvImageFormat = vImageCVImageFormat_CreateWithCVPixelBuffer(source).takeRetainedValue()
+            
+            vImageCVImageFormat_SetColorSpace(cvImageFormat,
+                                              CGColorSpaceCreateDeviceRGB())
+            
+            vImageCVImageFormat_SetChromaSiting(cvImageFormat,
+                                                kCVImageBufferChromaLocation_Center)
+            
+            guard
+                let unmanagedConverter = vImageConverter_CreateForCVToCGImageFormat(
+                    cvImageFormat,
+                    &cgImageFormat,
+                    nil,
+                    vImage_Flags(kvImagePrintDiagnosticsToConsole),
+                    &error),
+                error == kvImageNoError else {
+                    print("vImageConverter_CreateForCVToCGImageFormat error:", error)
+                    return source
+            }
+            
+            converter = unmanagedConverter.takeRetainedValue()
+        }
+        
+        // Init source buffers
+        if sourceBuffers.isEmpty {
+            let numberOfSourceBuffers = Int(vImageConverter_GetNumberOfSourceBuffers(converter!))
+            sourceBuffers = [vImage_Buffer](repeating: vImage_Buffer(),
+                                            count: numberOfSourceBuffers)
+        }
+        
+        // Set source
+        vImageBuffer_InitForCopyFromCVPixelBuffer(
+            &sourceBuffers,
+            converter!,
+            source,
+            vImage_Flags(kvImageNoAllocate))
+        
+        // Allocate destination buffer only once for performance
+        if destinationBuffer.data == nil {
+            error = vImageBuffer_Init(&destinationBuffer,
+                                      UInt(CVPixelBufferGetHeightOfPlane(source, 0)),
+                                      UInt(CVPixelBufferGetWidthOfPlane(source, 0)),
+                                      cgImageFormat.bitsPerPixel,
+                                      vImage_Flags(kvImageNoFlags))
+        }
+        
+        error = vImageConvert_ARGB8888toRGB888(&sourceBuffers, &destinationBuffer, vImage_Flags(kvImageNoFlags))
+        
+        //guard error == kvImageNoError else {
+        //    return nil
+        //}
+        
+        vImageBuffer_CopyToCVPixelBuffer(&destinationBuffer,
+                                         &cgImageFormat,
+                                         source,
+                                         nil,
+                                         nil,
+                                         vImage_Flags(kvImageNoFlags));
+        
+        
+        // Unlock
+        CVPixelBufferUnlockBaseAddress(source,
+                                       CVPixelBufferLockFlags.readOnly)
+        
+        return source
+    }
+
 }
 
 extension CaptureController: CaptureControllerDelegate {
@@ -576,8 +657,10 @@ extension CaptureController: AVCapturePhotoCaptureDelegate {
         //print(cgImageRefSmall!.colorSpace!) // kCGColorSpaceICCBased; kCGColorSpaceModelRGB; sRGB IEC61966-2.1)
         
         
-        /* Note: The lengthy code here is for manipulating the image coding from the photo format into a format that is supported by AVAssetWriter on the iPhone X. This is unnecessary on iPhone XS, but required on X. TL;DR: Use Accelerate to manipulate the frame data */ :
+        /* Note: The lengthy code here is for manipulating the image coding from the photo format into a format that is supported by AVAssetWriter on the iPhone X. This is unnecessary on iPhone XS, but required on X. TL;DR: Use Accelerate to manipulate the frame data */
         // See https://developer.apple.com/documentation/accelerate/vimage/applying_vimage_operations_to_video_sample_buffers
+        
+        /*
         
         // Lock
         CVPixelBufferLockBaseAddress(imageBuffer!,
@@ -635,11 +718,14 @@ extension CaptureController: AVCapturePhotoCaptureDelegate {
                                           vImage_Flags(kvImageNoFlags))
         }
         
+        /*
         error = vImageConvert_AnyToAny(converter!,
                                        &sourceBuffers,
                                        &destinationBuffer,
                                        nil,
                                        vImage_Flags(kvImageNoFlags))
+        */
+        error = vImageConvert_ARGB8888toRGB888(&sourceBuffers, &destinationBuffer, vImage_Flags(kvImageNoFlags))
         
         guard error == kvImageNoError else {
             return
@@ -665,6 +751,10 @@ extension CaptureController: AVCapturePhotoCaptureDelegate {
         
         
         //vImageConvert_Planar8toRGB888
+ 
+        */
+        
+        imageBuffer = convertRGB2RGB(imageBuffer!)
         
         // Timestamp
         let timestamp = photo.timestamp
@@ -905,4 +995,5 @@ extension UIImage {
         return newImage!
     }
 }
+
 
