@@ -913,6 +913,16 @@ extension CaptureController: AVCapturePhotoCaptureDelegate {
         let intrinsics = photo.cameraCalibrationData!.intrinsicMatrix
         let extrinsics = photo.cameraCalibrationData!.extrinsicMatrix
         
+        // Extract nonlin calibration data
+        let lensDistortionCenter = photo.cameraCalibrationData!.lensDistortionCenter
+        let lookupTable = photo.cameraCalibrationData!.lensDistortionLookupTable
+        let float32size = MemoryLayout<Float32>.stride // should be 4, but do not hardcode
+        let elementCount = lookupTable!.count / float32size
+        let table: [Float32] = lookupTable!.withUnsafeBytes {
+            return Array(UnsafeBufferPointer<Float32>(start: $0, count: elementCount))
+        }
+        let strTable = table.map { String($0) }.joined(separator: ",")
+        
         // Append frame data to csv.
         /*
         let str = NSString(format: "%f,%d,%d\n",
@@ -922,7 +932,7 @@ extension CaptureController: AVCapturePhotoCaptureDelegate {
         )
         */
         // Append frame data to csv.
-        let str = NSString(format:"%f,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%d,%d,%f,%f\n",
+        let str = NSString(format:"%f,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%d,%d,%f,%f,%f,%f,%@\n",
                            CMTimeGetSeconds(timestamp),
                            CAMERA_ID,
                            self.frameCount,
@@ -930,7 +940,9 @@ extension CaptureController: AVCapturePhotoCaptureDelegate {
                            extrinsics[0][0],extrinsics[1][0],extrinsics[2][0],extrinsics[3][0],
                            extrinsics[0][1],extrinsics[1][1],extrinsics[2][1],extrinsics[3][1],
                            extrinsics[0][2],extrinsics[1][2],extrinsics[2][2],extrinsics[3][2],
-                           cgImageRef!.width,cgImageRef!.height,min,max)
+                           cgImageRef!.width,cgImageRef!.height,min,max,
+                           lensDistortionCenter.x,lensDistortionCenter.y,
+                           strTable)
         if sensorOutputStream.write(str as String) < 0 {
             print("Failure writing camera frame to output csv.")
         }
