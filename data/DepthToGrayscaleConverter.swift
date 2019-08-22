@@ -152,7 +152,7 @@ class DepthToGrayscaleConverter: FilterRenderer {
         //minMaxFromPixelBuffer(pixelBuffer, &min, &max, inputTextureFormat)
         
         var min: Float = 0.0
-        var max: Float = 2.0
+        var max: Float = 5.0
         //minMaxFromPixelBuffer(pixelBuffer, &min, &max, inputTextureFormat)
         
         if min < lowest {

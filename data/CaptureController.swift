@@ -916,6 +916,7 @@ extension CaptureController: AVCapturePhotoCaptureDelegate {
         // Extract nonlin calibration data
         let lensDistortionCenter = photo.cameraCalibrationData!.lensDistortionCenter
         let lookupTable = photo.cameraCalibrationData!.lensDistortionLookupTable
+        //let invLookupTable = photo.cameraCalibrationData!.inverseLensDistortionLookupTable
         let float32size = MemoryLayout<Float32>.stride // should be 4, but do not hardcode
         let elementCount = lookupTable!.count / float32size
         let table: [Float32] = lookupTable!.withUnsafeBytes {
