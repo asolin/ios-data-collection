@@ -1,53 +1,19 @@
-# VIO Data Collection App for iOS (Swift)
+# iOS Data Collection App
 
-This app is for collecting time-synched visual and indertial (IMU) data on Apple iOS devices (iPhones/iPads). The purpose is to dump raw sensor data in a format compatible for reconstructing online behaviour of the APIs in offline tests.
+## Xcode setup
 
-## Supported sensors:
+* Install cocoapods, eg `brew install cocoapods`.
+* In the root folder run `pod install`.
+* Open the project in Xcode by selecting the generated `.xcworkspace` file, *not* `.xcodeproj`.
+* In Xcode, setup developer profile, bundle id, etc. (preferably do not commit changes to git.)
+* Connect device and hit the run button.
 
-All data observations are stored in a CSV file with the format `timestamp, type, val0, val1, ...` and the video frames in an accompanying MOV file (filenames are `data-yyyy-MM-dd-HH-mm-ss` in UTC). The `timestamp` is the one directly reported by the delegate methods in the APIs (no post-processing done). The `type` fields are according to the following:
+## Using the app
 
-### 0 - Initial timestamp
-The first stored data item is the start time of the data collection session in both the senosor time and unix time. The timestamp of this event is received from the system uptime and `val0` corresponds to the current unix time from the device (might be off, it appears), and `val1` to the NTP network unix time requested from NTP servers using Kronos.
+* Press "Settings" to choose what camera mode (ARKit, AVCamera) to use and what sensors to record.
+* Press "Start" and record your data. End the session by pressing "Stop".
+* Press "Files" to see all the data recorded. Click individual files to open file transfer menu. AirDrop may be convenient for a few files. To setup it on Mac, in Finder "Choose Go > AirDrop from the menu bar in the Finder", and choose "Allow me to be discovered by Everyone". To move larger quantities of files more easily, use iTunes: Connect the device with a cable and in the iTunes program click the tiny button near top left to show data about the device. Choose File Sharing, then in the Apps list choose the data collection app. It may be necessary to enable some kind of developer options or trusted connection setting for the "File Sharing" to appear. On the iOS app you can delete all the files by pressing the trashcan icon.
 
-### 1 - Camera frames
-Data collected through AVFoundation. The actual frame timestamps are reported together with the frame number (`val0`) in the CSV. Current camera defaults are set as follows:
-* Resolution: 640x480 (portrait)
-* Color
-* Focus locked to 1.0 (~infinity)
-* ISO value locked to: 400
-* Shutter speed locked to: 1/100
+## Format of data
 
-The video frames are appended to an H.264 encoded video file (through CoreMedia) in the order they arrive. The frame timestamps are in theory also stored in the video, but we recommend extracting the frames from the video and use the frame timestamps stored in the CSV.
-
-### 2 - Platform location
-Data collected through CoreLocation. The update rate depends on the device and its capabilities. Locations are requested with the desired accuracy of `kCLLocationAccuracyBest`. The timestamps are converted to follow the same clock as the other sensors (time interval since device boot). The stored values are
-* coordinate.latitude
-* coordinate.longitude
-* horizontalAccuracy
-* altitude
-* verticalAccuracy
-* speed
-
-### 3 - Accelerometer
-Data collected through CoreMotion/CMMotionManager. Acquired at 100 Hz, which is the maximum rate. CoreMotion reports the accelerations in "g"s (at standstill you expect to have 1 g in the vertical direction), and in order to have backward compatibility with our older data sets, we have chosen to scale the values by `-9.81` (the minus sign is to conform to Google Android).
-
-### 4 - Gyroscope 
-Data collected through CoreMotion/CMMotionManager. Acquired at 100 Hz, which is the maximum rate. Note that the readings are in the Apple device coordinate frame (not altered in any way here).
-
-### 5 - Magnetometer
-Data collected through CoreMotion/CMMotionManager). Acquired at 100 Hz, which is the maximum rate. Values are the three-axis magnetometer readings in uT. All values are uncalibrated.
-
-### 6 - Barometric altimeter
-Data collected through CoreMotion/CMAltimeter. Acquired at an uneven sampling rate (~1 Hz). Samples are stored as they arrive from the delegare callback. The actual barometric pressure is in `val0` and the inferred relative altutude (calculated by Apple magic) is stored in `val1`.
-
-### 7 - ARKit output
-In case of also storing the visual-inertial odometry result calculated by Apple ARKit, the control of the device camera is lost. Instead we can store the camera frames returned by ARKit (no control of setting the resolution, nor locking focus, shutter speed, white balance, etc.). ARKit seems to give video output with the following sepcification (at least on iPhone 6S):
-* Resolution: 1280x720 (portrait)
-* Color
-* Refresh rate: 60 Hz
-
-The stored values at each ARKit frame are
-* frame number
-* translation (~position)
-* euler angles (~orientation)
-* instrinsic parameters (camera calibration: focal lengths and prinicipal point)
+For now see the descriptions on the "Settings" tab or read the source code.
