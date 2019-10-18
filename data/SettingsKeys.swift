@@ -1,52 +1,61 @@
 import Foundation
 
-class SettingsKeys {
-    static let PointcloudEnableKey = "pointcloudEnableKey"
-    static let GyroEnableKey = "gyroEnableKey"
-    static let AccEnableKey = "accEnableKey"
-    static let MagnetEnableKey = "magnetEnableKey"
-    static let BarometerEnableKey = "baroEnableKey"
-    static let LocationEnableKey = "locationEnableKey"
-
-    static let keys: [String] = [PointcloudEnableKey, LocationEnableKey, AccEnableKey, GyroEnableKey, MagnetEnableKey, BarometerEnableKey]
+// On-off options that correspond to a switch on the UI and a value in UserDefaults.
+enum SettingSwitch {
+    case ARKitPointCloud
+    // case ARKitDebug
+    // case ARKitAutoFocus
+    case Location
+    case Accelerometer
+    case Gyroscope
+    case Magnetometer
+    case Barometer
 }
 
-class SettingsCellTitles {
-    static let titles : [String : String] = [
-        SettingsKeys.GyroEnableKey : "Gyroscope",
-        SettingsKeys.AccEnableKey : "Accelerometer",
-        SettingsKeys.MagnetEnableKey : "Magnetometer",
-        SettingsKeys.BarometerEnableKey : "Barometer",
-        SettingsKeys.LocationEnableKey : "GPS Location",
-        SettingsKeys.PointcloudEnableKey : "ARKit point cloud"
-    ]
+// Order of switches shown in the Settings tab.
+let settingSwitches: [SettingSwitch] = [
+    SettingSwitch.ARKitPointCloud,
+    SettingSwitch.Location,
+    SettingSwitch.Accelerometer,
+    SettingSwitch.Gyroscope,
+    SettingSwitch.Magnetometer,
+    SettingSwitch.Barometer,
+]
+
+// Titles shown in the UI and also keys for UserDefault values.
+func settingSwitchTitle(_ s: SettingSwitch) -> String {
+    switch s {
+        case .Gyroscope: return "Gyroscope"
+        case .Accelerometer: return "Accelerometer"
+        case .Magnetometer: return "Magnetometer"
+        case .Barometer: return "Barometer"
+        case .Location: return "GPS Location"
+        case .ARKitPointCloud: return "ARKit point cloud"
+    }
 }
 
-class SettingsDescriptions {
-    static let descriptions : [String : String] = [
-        SettingsKeys.GyroEnableKey: """
-            (t, 4, x, y, z) [rad/s]
-            file: .csv
-            """,
-        SettingsKeys.AccEnableKey: """
-            (t, 3, x, y, z) [m/s^2]
-            file: .csv
-            """,
-        SettingsKeys.MagnetEnableKey: """
-            (t, 5, x, y, z)
-            file: .csv
-            """,
-        SettingsKeys.BarometerEnableKey: """
-            (t, 6, pressure, rel. alt.) [kPa, m]
-            file: .csv
-            """,
-        SettingsKeys.LocationEnableKey: """
-            (t, 2, lat, lon, prec., alt, prec., speed)
-            file: .csv
-            """,
-        SettingsKeys.PointcloudEnableKey: """
-            (t, frame num, (id, x, y, z,)+)
-            file: -pcl.csv, only in ARKit mode
-            """,
-    ]
-}
+let settingSwitchDescriptions: [SettingSwitch: String] = [
+    SettingSwitch.Gyroscope: """
+        (t, 4, x, y, z) [rad/s]
+        file: .csv
+        """,
+    SettingSwitch.Accelerometer: """
+        (t, 3, x, y, z) [m/s^2]
+        file: .csv
+        """,
+    SettingSwitch.Magnetometer: """
+        (t, 5, x, y, z)
+        file: .csv
+        """,
+    SettingSwitch.Barometer: """
+        (t, 6, pressure, rel. alt.) [kPa, m]
+        file: .csv
+        """,
+    SettingSwitch.Location: """
+        (t, 2, lat, lon, prec., alt, prec., speed)
+        file: .csv
+        """,
+    SettingSwitch.ARKitPointCloud: """
+        (t, frame num, (id, x, y, z,)+)
+        file: -pcl.csv, only in ARKit mode
+        """, ]

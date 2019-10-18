@@ -36,7 +36,7 @@ class FilesViewController: UIViewController, UITableViewDataSource, UITableViewD
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell:UITableViewCell = tableView.dequeueReusableCell(withIdentifier: "myCell")!
-        var list = listFilesFromDocumentsFolder()
+        let list = listFilesFromDocumentsFolder()
 
         cell.textLabel?.text = list?[indexPath.row]
         if cell.textLabel?.text?.range(of: "mov") != nil {

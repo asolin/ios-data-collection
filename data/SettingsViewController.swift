@@ -50,7 +50,7 @@ class SettingsViewController: UIViewController {
             settingsSwitch.setOn(true, animated: false)
         }
 
-        if key == SettingsKeys.PointcloudEnableKey {
+        if key == settingSwitchTitle(.ARKitPointCloud) {
             let cameraMode = getCameraMode()
             settingsSwitch.isEnabled = cameraMode == CameraMode.ARKit
         }
@@ -69,7 +69,7 @@ class SettingsViewController: UIViewController {
         let cameraMode = getCameraMode()
         viewControllerDelegate.updateCameraMode(cameraMode)
         for cell in cellList {
-            if cell.cellTag == SettingsKeys.PointcloudEnableKey {
+            if cell.cellTag == settingSwitchTitle(.ARKitPointCloud) {
                 cell.settingsSwitch.isEnabled = cameraMode == CameraMode.ARKit
                 break
             }
@@ -95,16 +95,16 @@ extension SettingsViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "SettingsCell", for: indexPath) as! SettingsTableViewCell
 
-        if indexPath.item < SettingsKeys.keys.count {
-            let key = SettingsKeys.keys[indexPath.item]
-            let title = SettingsCellTitles.titles[key]
+        if indexPath.item < settingSwitches.count {
+            let setting = settingSwitches[indexPath.item]
+            let title = settingSwitchTitle(setting)
 
-            cell.titleLabel.text = "\(title!):"
-            cell.cellTag = key
-            cell.descriptionLabel.text = SettingsDescriptions.descriptions[key]
+            cell.titleLabel.text = "\(title):"
+            cell.cellTag = title
+            cell.descriptionLabel.text = settingSwitchDescriptions[setting]
             cell.delegate = self
 
-            setupSettingsSwitch(settingsSwitch: cell.settingsSwitch, key: key)
+            setupSettingsSwitch(settingsSwitch: cell.settingsSwitch, key: title)
         }
         else {
             print("Error: unexpected index path for settings table cell! \(indexPath.item)")
@@ -121,7 +121,7 @@ extension SettingsViewController: UITableViewDataSource {
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         cellList = []
-        return SettingsKeys.keys.count
+        return settingSwitches.count
     }
 }
 

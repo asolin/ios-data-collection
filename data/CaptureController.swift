@@ -226,7 +226,7 @@ class CaptureController: NSObject {
     }
 
     private func runLocation() {
-        if (UserDefaults.standard.bool(forKey: SettingsKeys.LocationEnableKey)){
+        if UserDefaults.standard.bool(forKey: settingSwitchTitle(.Location)) {
             locationManager.startUpdatingLocation()
         }
     }
@@ -283,7 +283,7 @@ extension CaptureController: CaptureControllerDelegate {
         sensorURL = dataPath(baseFilename, Storage.temporary, "csv")
         sensorOutputStream = OutputStream(url: sensorURL, append: false)
         sensorOutputStream!.open()
-        if UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey) {
+        if UserDefaults.standard.bool(forKey: settingSwitchTitle(.ARKitPointCloud)) {
             pointCloudURL = dataPath(baseFilename + "-pcl", Storage.temporary, "csv")
             pointCloudOutputStream = OutputStream(url: pointCloudURL, append: false)
             pointCloudOutputStream!.open()
@@ -301,16 +301,16 @@ extension CaptureController: CaptureControllerDelegate {
         captureStartTimestamp = Optional.some(ProcessInfo.processInfo.systemUptime)
 
         // Setup data acquisition.
-        if UserDefaults.standard.bool(forKey: SettingsKeys.AccEnableKey) {
+        if UserDefaults.standard.bool(forKey: settingSwitchTitle(.Accelerometer)) {
             runAccDataAcquisition(motionManager, opQueue, sensorOutputStream)
         }
-        if UserDefaults.standard.bool(forKey: SettingsKeys.GyroEnableKey) {
+        if UserDefaults.standard.bool(forKey: settingSwitchTitle(.Gyroscope)) {
             runGyroDataAcquisition(motionManager, opQueue, sensorOutputStream)
         }
-        if UserDefaults.standard.bool(forKey: SettingsKeys.MagnetEnableKey) {
+        if UserDefaults.standard.bool(forKey: settingSwitchTitle(.Magnetometer)) {
             runMagnetometerDataAcquisition(motionManager, opQueue, sensorOutputStream)
         }
-        if UserDefaults.standard.bool(forKey: SettingsKeys.BarometerEnableKey) {
+        if UserDefaults.standard.bool(forKey: settingSwitchTitle(.Barometer)) {
             runBarometerDataAcquisition(altimeter, opQueue, sensorOutputStream)
         }
         runLocation()
@@ -320,7 +320,6 @@ extension CaptureController: CaptureControllerDelegate {
         case .AV:
             break
         case .ARKit:
-            //if !UserDefaults.standard.bool(forKey: SettingsKeys.VideoARKitEnableKey) { }
             arSession.pause()
             arSession.run(arConfiguration, options: [.resetTracking, .removeExistingAnchors])
         }
@@ -355,7 +354,7 @@ extension CaptureController: CaptureControllerDelegate {
         // Handle data files.
         sensorOutputStream.close()
         moveDataFileToDocuments(sensorURL)
-        if UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey) {
+        if UserDefaults.standard.bool(forKey: settingSwitchTitle(.ARKitPointCloud)) {
             pointCloudOutputStream.close()
             moveDataFileToDocuments(pointCloudURL)
         }
@@ -382,7 +381,7 @@ extension CaptureController: ARSessionDelegate {
             firstFrame = false
         }
 
-        if UserDefaults.standard.bool(forKey: SettingsKeys.PointcloudEnableKey) {
+        if UserDefaults.standard.bool(forKey: settingSwitchTitle(.ARKitPointCloud)) {
             // Append ARKit point cloud to csv.
             var ok = true;
             if let rawFeaturePoints = frame.rawFeaturePoints {
