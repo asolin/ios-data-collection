@@ -63,21 +63,6 @@ class CaptureController: NSObject {
         locationManager.requestWhenInUseAuthorization()
 
         arConfiguration = ARWorldTrackingConfiguration()
-        // arConfiguration.planeDetection = .horizontal
-        // Resolution and autofocus can be set starting from iOS 11.3.
-        // The default is best resolution and auto focus enabled.
-        if #available(iOS 11.3, *) {
-            // arConfiguration.isAutoFocusEnabled = false
-            // for f in ARWorldTrackingConfiguration.supportedVideoFormats {
-            //     if f.imageResolution.height == 1080 {
-            //         // With default resolution 1920x1440, the 1920x1080 resulting video with this setting seems to be stretched.
-            //         arConfiguration.videoFormat = f
-            //         print("set video format")
-            //     }
-            //     print(f)
-            // }
-            // print(arConfiguration.videoFormat)
-        }
 
         Clock.sync()
     }
@@ -270,6 +255,10 @@ extension CaptureController: CaptureControllerDelegate {
 
     func startCapture() {
         Clock.sync()
+
+        if #available(iOS 11.3, *) {
+            arConfiguration.isAutoFocusEnabled = UserDefaults.standard.bool(forKey: settingSwitchTitle(.ARKitAutoFocus))
+        }
 
         // Filename from date.
         let date = Date()

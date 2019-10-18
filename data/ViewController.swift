@@ -43,7 +43,14 @@ class ViewController: UIViewController {
         avCameraPreview.videoGravity = AVLayerVideoGravity.resizeAspect
 
         arView.layer.addSublayer(avCameraPreview)
-        arView.debugOptions = [.showFeaturePoints, .showWorldOrigin]
+
+        // Setting these here mean they only take effect on restart.
+        if UserDefaults.standard.bool(forKey: settingSwitchTitle(.ARKitDebug)) {
+            arView.debugOptions = [.showFeaturePoints, .showWorldOrigin]
+        }
+        else {
+            arView.debugOptions = []
+        }
 
         // Put a shadow under record time label.
         timeLabel.text = ""
