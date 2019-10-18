@@ -3,8 +3,8 @@ import Foundation
 // On-off options that correspond to a switch on the UI and a value in UserDefaults.
 enum SettingSwitch {
     case ARKitPointCloud
-    // case ARKitDebug
-    // case ARKitAutoFocus
+    case ARKitDebug
+    case ARKitAutoFocus
     case Location
     case Accelerometer
     case Gyroscope
@@ -15,6 +15,8 @@ enum SettingSwitch {
 // Order of switches shown in the Settings tab.
 let settingSwitches: [SettingSwitch] = [
     SettingSwitch.ARKitPointCloud,
+    SettingSwitch.ARKitDebug,
+    SettingSwitch.ARKitAutoFocus,
     SettingSwitch.Location,
     SettingSwitch.Accelerometer,
     SettingSwitch.Gyroscope,
@@ -25,15 +27,19 @@ let settingSwitches: [SettingSwitch] = [
 // Titles shown in the UI and also keys for UserDefault values.
 func settingSwitchTitle(_ s: SettingSwitch) -> String {
     switch s {
-        case .Gyroscope: return "Gyroscope"
+        case .ARKitPointCloud: return "ARKit point cloud"
+        case .ARKitDebug: return "ARKit debug visualizations"
+        case .ARKitAutoFocus: return "ARKit auto focus"
+        case .Location: return "GPS Location"
         case .Accelerometer: return "Accelerometer"
+        case .Gyroscope: return "Gyroscope"
         case .Magnetometer: return "Magnetometer"
         case .Barometer: return "Barometer"
-        case .Location: return "GPS Location"
-        case .ARKitPointCloud: return "ARKit point cloud"
     }
 }
 
+// Probably the user will prefer to get this information from project README or manual.
+/*
 let settingSwitchDescriptions: [SettingSwitch: String] = [
     SettingSwitch.Gyroscope: """
         (t, 4, x, y, z) [rad/s]
@@ -59,3 +65,4 @@ let settingSwitchDescriptions: [SettingSwitch: String] = [
         (t, frame num, (id, x, y, z,)+)
         file: -pcl.csv, only in ARKit mode
         """, ]
+*/

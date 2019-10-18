@@ -99,9 +99,9 @@ extension SettingsViewController: UITableViewDataSource {
             let setting = settingSwitches[indexPath.item]
             let title = settingSwitchTitle(setting)
 
-            cell.titleLabel.text = "\(title):"
+            cell.titleLabel.text = title
             cell.cellTag = title
-            cell.descriptionLabel.text = settingSwitchDescriptions[setting]
+            // cell.descriptionLabel.text = settingSwitchDescriptions[setting]
             cell.delegate = self
 
             setupSettingsSwitch(settingsSwitch: cell.settingsSwitch, key: title)
