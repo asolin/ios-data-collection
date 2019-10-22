@@ -465,27 +465,30 @@ extension CaptureController: AVCaptureVideoDataOutputSampleBufferDelegate {
             print("captureOutput(): videoInput not ready.")
         }
 
+        // Camera intrinsic matrix (focal lengths and principal point).
+        var intrinsics = matrix_float3x3()
+        if #available(iOS 11.0, *) {
+            if let camData = CMGetAttachment(sampleBuffer, key: kCMSampleBufferAttachmentKey_CameraIntrinsicMatrix, attachmentModeOut: nil) as? Data {
+                intrinsics = camData.withUnsafeBytes { $0.pointee }
+            }
+        }
+        let fx = intrinsics.columns.0.x
+        let fy = intrinsics.columns.1.y
+        let px = intrinsics.columns.2.x
+        let py = intrinsics.columns.2.y
+
         // Append frame data to csv.
-        let str = NSString(format: "%f,%d,%d\n",
+        let str = NSString(format: "%f,%d,%d,%f,%f,%f,%f\n",
             CMTimeGetSeconds(timestamp),
             CAMERA_ID,
-            self.frameCount
+            self.frameCount,
+            fx, fy, px, py
             )
         if sensorOutputStream.write(str as String) < 0 {
             print("Failure writing camera frame to output csv.")
         }
 
         self.frameCount = self.frameCount + 1
-
-        // Camera intrinsic matrix (focal lengths and principal point).
-        // <https://stackoverflow.com/a/48159895>
-        /*
-        var intrinsics = matrix_float3x3()
-        if let camData = CMGetAttachment(sampleBuffer, kCMSampleBufferAttachmentKey_CameraIntrinsicMatrix, nil) as? Data {
-            intrinsics = camData.withUnsafeBytes { $0.pointee }
-            // Note that it may be necessary to scale the focal lengths depending on resolution.
-        }
-        */
     }
 
     func captureOutput(_ output: AVCaptureOutput, didDrop sampleBuffer: CMSampleBuffer, from connection:
