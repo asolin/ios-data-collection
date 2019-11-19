@@ -199,9 +199,6 @@ class CaptureController: NSObject {
 
         videoInput = AVAssetWriterInput(mediaType: AVMediaType.video, outputSettings: videoOutputSettings)
         videoInput?.expectsMediaDataInRealTime = true
-        // Rotate by 90 degrees to get portrait orientation. Do not use initializer parameter `rotationAngle: CGFloat(Double.pi/2))`
-        // because it gives inexact values for the transform matrix entries.
-        videoInput?.transform = CGAffineTransform.init(a: 0.0, b: 1.0, c: -1.0, d: 0.0, tx: 0.0, ty: 0.0);
         pixelBufferAdaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: videoInput!, sourcePixelBufferAttributes: sourceBufferAttributes)
 
         assetWriter!.add(videoInput!)
