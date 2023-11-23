@@ -17,3 +17,7 @@
 ## Format of data
 
 For now see the descriptions on the "Settings" tab or read the source code.
+
+## License
+
+This software is provided under the [MIT License](LICENSE).
