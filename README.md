@@ -1,5 +1,7 @@
 # iOS Data Collection App
 
+A simple and lightweight iOS app for collecting/dumping sensor data from the device in a time-synched manner on Apple iOS devices (iPhones/iPads). Supported sensors include the IMU (accelerometer, gyroscope, magnetometer), the RGB camera(s), etc. The app itself does minimal processing of the data. This app is simply to get your hands dirty with the real data from a device that can be used for research and tinkering.
+
 ## Xcode setup
 
 * Install cocoapods, eg `brew install cocoapods`.
@@ -16,7 +18,7 @@
 
 ## Format of data
 
-For now see the descriptions on the "Settings" tab or read the source code.
+For now, see the descriptions on the "Settings" tab or read the source code.
 
 ## License
 
